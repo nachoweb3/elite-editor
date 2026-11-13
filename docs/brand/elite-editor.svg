@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1280" height="480" viewBox="0 0 1280 480" role="img" aria-labelledby="title desc">
+ <title id="title">Elite Editor</title><desc id="desc">Created totally free by @nacho_web3. Innovation is our flag. Editor de vídeo con IA.</desc>
+ <defs><radialGradient id="glow"><stop stop-color="#154d42"/><stop offset="1" stop-color="#030509"/></radialGradient><linearGradient id="mint"><stop stop-color="#b9ffe7"/><stop offset="1" stop-color="#67d5ff"/></linearGradient><pattern id="stars" width="177" height="137" patternUnits="userSpaceOnUse"><circle cx="25" cy="21" r="1" fill="#c6fff4"/><circle cx="117" cy="93" r="1.4" fill="#fff" opacity=".5"/><circle cx="66" cy="114" r=".6" fill="#b7acff"/></pattern></defs>
+ <rect width="1280" height="480" rx="24" fill="url(#glow)"/><rect width="1280" height="480" rx="24" fill="url(#stars)"/>
+ <rect x="66" y="63" width="430" height="42" rx="21" fill="#0c2825" stroke="#4da58e"/>
+ <g font-family="Arial, Helvetica, sans-serif"><text x="87" y="90" fill="#c8fbee" font-size="18">Created totally free by @nacho_web3</text><text x="64" y="243" fill="url(#mint)" font-size="100" font-weight="700" letter-spacing="-4">Elite Editor.</text><text x="69" y="301" fill="#e2e6ef" font-size="27">Tu creatividad. Todo el control.</text><text x="70" y="406" fill="#b4c4cf" font-size="16" letter-spacing="5">INNOVATION IS OUR FLAG</text></g>
+ <g fill="none" stroke="#80f4d0" opacity=".65"><circle cx="1080" cy="239" r="107"/><ellipse cx="1080" cy="239" rx="155" ry="45" transform="rotate(-32 1080 239)"/></g><path d="M1053 194 L1120 239 L1053 284Z" fill="url(#mint)"/>
+</svg>

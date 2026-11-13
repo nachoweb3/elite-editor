@@ -1,0 +1,2 @@
+export const faceDefaults={faceRetouch:true,faceSmooth:.22,faceLight:.12,faceUnderEyes:.12,faceEyes:.08,faceTeeth:0,faceJaw:0};
+export function faceSettings(settings){const s={...faceDefaults,...settings};if(typeof s.faceRetouch!=='boolean')throw new Error('Retoque facial inválido');for(const k of Object.keys(faceDefaults).filter(k=>k!=='faceRetouch'))if(!Number.isFinite(s[k])||s[k]<0||s[k]>1)throw new Error('Control facial fuera de rango: '+k);return Object.fromEntries(Object.keys(faceDefaults).map(k=>[k,s[k]]));}

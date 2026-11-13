@@ -1,0 +1,7 @@
+# Optional local AI workers. Python 3.11 recommended on Windows.
+faster-whisper==1.2.1
+scenedetect==0.6.7.1
+mediapipe==1.2.2
+numpy==2.2.6
+opencv-contrib-python==5.0.0.93
+pillow==13.0.0
