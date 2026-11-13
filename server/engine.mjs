@@ -1,3 +1,4 @@
+import {sourceAudioFilters,sourceVideoFilters} from './source-settings.mjs';
 import {mixTracks} from './audio-tracks.mjs';
 import {retouchSource} from './retouch.mjs';
 import fs from 'node:fs/promises';
@@ -19,7 +20,7 @@ export async function analyze(id,report){let p=await load(id);const cfg=await co
   p=await load(id);p.transcript=transcript;p.analysis={silences,scenes,warnings,completedAt:new Date().toISOString(),model:cfg.model,cutEngine:autoClips?'auto-editor':'ffmpeg',transcriptionComplete:!p.media.audio||transcript.length>0};p.clips=autoClips||proposedClips(silences,p.media.duration,cfg.speechPadding);p.reviewed=false;p.revision++;p.artifacts={};await save(p);report(warnings.length?'Análisis terminado con avisos':'Análisis terminado');return p;
 }
 export function frameFilter(s,w,h){let f=s.fit==='cover'?`scale=${w}:${h}:force_original_aspect_ratio=increase,crop=${w}:${h}:(iw-ow)*${s.cropX}:(ih-oh)*${s.cropY}`:`scale=${w}:${h}:force_original_aspect_ratio=decrease,pad=${w}:${h}:(ow-iw)/2:(oh-ih)/2:color=0x08090D`;
-  if(s.zoom>1)f+=`,scale=trunc(iw*${s.zoom}/2)*2:trunc(ih*${s.zoom}/2)*2,crop=${w}:${h}:(iw-ow)*${s.cropX}:(ih-oh)*${s.cropY}`;return f+`,setsar=1,eq=brightness=${s.exposure}:contrast=${s.contrast}:saturation=${s.saturation}`;}
+  if(s.zoom>1)f+=`,scale=trunc(iw*${s.zoom}/2)*2:trunc(ih*${s.zoom}/2)*2,crop=${w}:${h}:(iw-ow)*${s.cropX}:(ih-oh)*${s.cropY}`;return f+`,setsar=1,eq=brightness=${s.exposure}:contrast=${s.contrast}:saturation=${s.saturation}`+(sourceVideoFilters(s).length?','+sourceVideoFilters(s).join(','):'');}
 export function motionFilter(motion,w,h,length){
   if(!motion||motion==='none')return '';
   const frames=Math.max(2,Math.round(length*30));
@@ -46,7 +47,7 @@ export async function render(id,preview,report,{automatic=false}={}){const p=awa
     try{await run('ffmpeg',args,{log:report});}catch(e){if(hardware&&s.encoder==='auto'){hardware=false;report('NVENC falló durante el render. Reintentando con CPU.');await run('ffmpeg',[...input,'-t',String(length),'-map','0:v:0','-map',hasAudio?'0:a:0':'1:a:0','-vf',vf,'-af','aresample=48000,asetpts=PTS-STARTPTS',...enc(),'-c:a','aac','-b:a','192k','-ac','2',target],{log:report});}else throw e;}files.push(target);}
   await fs.writeFile(path.join(dir,'concat.txt'),files.map(f=>`file '${path.basename(f)}'`).join('\n'));
   report('Componiendo subtítulos, marca y mezcla de audio');const outDir=path.join(ROOT,'output',preview?'previews':folder);const base=`${id}-${p.revision}-${tag.slice(0,8)}`,output=path.join(outDir,base+'.mp4');
-  const args=['-hide_banner','-nostdin','-y','-f','concat','-safe','1','-i','concat.txt'];let graph='[0:a]asetpts=PTS-STARTPTS,'+(s.cleanAudio?'highpass=f=75,afftdn=nf=-25,loudnorm=I=-16:TP=-1.5:LRA=11':'anull')+'[voice];',audio='voice',inputIndex=1;
+  const args=['-hide_banner','-nostdin','-y','-f','concat','-safe','1','-i','concat.txt'];let graph='[0:a]asetpts=PTS-STARTPTS,'+(sourceAudioFilters(s).join(',')||'anull')+'[voice];',audio='voice',inputIndex=1;
   if(s.musicId){const assets=await readAssets(),asset=assets.find(a=>a.id===s.musicId&&a.kind==='music');if(!asset)throw new Error('Música seleccionada no disponible');args.push('-stream_loop','-1','-i',asset.file);graph+=`[voice]asplit=2[main][side];[${inputIndex++}:a]volume=${s.musicVolume}[bed];[bed][side]sidechaincompress=threshold=0.025:ratio=8:attack=15:release=400[duck];[main][duck]amix=inputs=2:duration=first:normalize=0[mix];`;audio='mix';}
   if(s.soundEffects&&clips.length>1){args.push('-i',path.join(ROOT,'sound_effects/soft-whoosh.wav'));const n=clips.length-1;graph+=`[${inputIndex++}:a]volume=0.13,asplit=${n}${Array.from({length:n},(_,i)=>`[fx${i}]`).join('')};`;let t=0;const delayed=[];for(let i=0;i<n;i++){t+=clips[i].end-clips[i].start;graph+=`[fx${i}]adelay=${Math.round(t*1000)}:all=1[d${i}];`;delayed.push(`[d${i}]`);}graph+=`[${audio}]${delayed.join('')}amix=inputs=${n+1}:duration=first:normalize=0[withfx];`;audio='withfx';}
   const manualMix=mixTracks(p.audioTracks||[],await readAssets(),duration,args,inputIndex,audio);graph+=manualMix.graph;audio=manualMix.audio;

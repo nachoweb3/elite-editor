@@ -24,9 +24,12 @@ Abre http://127.0.0.1:5181/projects. Después puedes usar `ELITE_EDITOR.cmd`. No
 ## Qué incluye
 
 - Timeline de OpenCut adaptada: medios, capas, textos, recortes y keyframes.
+- Zoom animado con rombos, selección de zona del lienzo y posición X/Y. Veinte estilos de texto editables organizados por uso.
 - Asistente integrado: propuesta de cortes, subtítulos editables e instrucciones con revisión antes/después.
 - Análisis local opcional con Whisper, FFmpeg y Ollama; retoque facial con MediaPipe y voz limpia.
+- Limpieza manual de vídeo/voz y 14 controles de belleza, incluidos tamaños de ojos, nariz y boca en ambos sentidos. Procesamiento previo sobre una copia, con cuatro presets de partida.
 - Diez efectos GPU, incluido chroma key; seis animaciones de entrada/salida y 188 audios CC0 preinstalados.
+- Audio con categorías, búsqueda por autor/colección, orden por duración y favoritos locales.
 - Explicaciones stickman que puedes revisar, quitar y componer en el render.
 - Biblioteca con tu identidad de proyecto, universo animado y firma @nacho_web3.
 

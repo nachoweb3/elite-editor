@@ -16,10 +16,11 @@ import {
 import { HugeiconsIcon, type IconSvgElement } from "@hugeicons/react";
 
 export const TAB_KEYS = [
- "background",
- "assistant",
- "generate",
- "nacho",
+	"zoom",
+	"background",
+	"assistant",
+	"generate",
+	"nacho",
 	"media",
 	"sounds",
 	"text",
@@ -40,10 +41,26 @@ const createHugeiconsIcon =
 	);
 
 export const tabs = {
- background:{icon:createHugeiconsIcon({icon:SlidersHorizontalIcon}),label:'Quitar fondo'},
- assistant: {icon:createHugeiconsIcon({icon:MagicWand05Icon}),label:"Asistente IA"},
- generate: {icon:createHugeiconsIcon({icon:ColorsIcon}),label:"Crear con IA"},
- nacho: {icon:createHugeiconsIcon({icon:Folder03Icon}),label:"Biblioteca Elite"},
+	zoom: {
+		icon: createHugeiconsIcon({ icon: SlidersHorizontalIcon }),
+		label: "Zoom ◆",
+	},
+	background: {
+		icon: createHugeiconsIcon({ icon: SlidersHorizontalIcon }),
+		label: "Quitar fondo",
+	},
+	assistant: {
+		icon: createHugeiconsIcon({ icon: MagicWand05Icon }),
+		label: "Asistente IA",
+	},
+	generate: {
+		icon: createHugeiconsIcon({ icon: ColorsIcon }),
+		label: "Crear con IA",
+	},
+	nacho: {
+		icon: createHugeiconsIcon({ icon: Folder03Icon }),
+		label: "Biblioteca Elite",
+	},
 	media: {
 		icon: createHugeiconsIcon({ icon: Folder03Icon }),
 		label: "Medios",

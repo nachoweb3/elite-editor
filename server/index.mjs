@@ -6,6 +6,7 @@ import {updateStickmen} from './stickman.mjs';
 import {importDiffusion} from './diffusion-sync.mjs';
 import {editByPrompt,undoPrompt,cutByTranscript,previewInstruction,enhanceInstruction} from './prompt-editor.mjs';
 import {faceSettings} from './retouch-settings.mjs';
+import {sourceSettings} from './source-settings.mjs';
 import http from 'node:http';
 import {pexelsStatus,searchPexels} from './pexels.mjs';
 import fs from 'node:fs';
@@ -62,7 +63,7 @@ const server=http.createServer(async(req,res)=>{try{
     if(action==='sync'&&method==='POST'){const b=await body(req);send(res,safe(await importDiffusion(id,b.revision)));return;}
     if(action==='manual'&&method==='POST'){send(res,safe(await saveManual(id,await body(req))));return;}
     if(action==='undo'&&method==='POST'){send(res,safe(await undoPrompt(id)));return;}
-    if(action==='portrait'&&method==='POST'){const b=await body(req);if(b.revision!==p.revision)throw new Error('Recarga el proyecto antes de guardar');p.history=[...(p.history||[]),{settings:p.settings,clips:p.clips}].slice(-20);if(b.settings.cleanAudio!==undefined&&typeof b.settings.cleanAudio!=='boolean')throw Error('Audio setting invalid');p.settings={...p.settings,...faceSettings(b.settings),...(typeof b.settings.cleanAudio==='boolean'?{cleanAudio:b.settings.cleanAudio}:{})};p.revision++;p.artifacts={};await save(p);send(res,safe(p));return;}
+    if(action==='portrait'&&method==='POST'){const b=await body(req);if(b.revision!==p.revision)throw new Error('Recarga el proyecto antes de guardar');p.history=[...(p.history||[]),{settings:p.settings,clips:p.clips}].slice(-20);if(b.settings.cleanAudio!==undefined&&typeof b.settings.cleanAudio!=='boolean')throw Error('Audio setting invalid');p.settings={...p.settings,...faceSettings(b.settings),...sourceSettings({...p.settings,...b.settings}),...(typeof b.settings.cleanAudio==='boolean'?{cleanAudio:b.settings.cleanAudio}:{})};p.revision++;p.artifacts={};await save(p);send(res,safe(p));return;}
     if(action==='timeline'&&method==='POST'){const b=await body(req);if(b.revision!==p.revision){send(res,{error:'El proyecto cambió. Recarga antes de guardar.'},409);return;}p.settings=validateSettings(b.settings);p.clips=validateTimeline(b.clips,p.media.duration);if(!p.clips.some(c=>c.enabled))throw new Error('Activa al menos un fragmento');if(b.transcript){if(!Array.isArray(b.transcript)||b.transcript.length!==p.transcript.length)throw new Error('Transcripción inválida');for(let i=0;i<p.transcript.length;i++){const text=b.transcript[i].text;if(typeof text!=='string'||text.length>5000)throw new Error('Texto inválido');if(text!==p.transcript[i].text){p.transcript[i].text=text;const tokens=text.trim().split(/\s+/),seg=p.transcript[i],step=(seg.end-seg.start)/Math.max(1,tokens.length);seg.words=tokens.filter(Boolean).map((word,k)=>({word,start:seg.start+k*step,end:seg.start+(k+1)*step,estimated:true}));}}}p.reviewed=b.reviewed===true;p.revision++;p.artifacts={};await save(p);send(res,safe(p));return;}
     if(action==='stickman'&&method==='POST'){send(res,safe(await updateStickmen(id,await body(req))));return;}
     if(action==='job'&&method==='POST'){const b=await body(req);send(res,await enqueue(id,b.type),202);return;}

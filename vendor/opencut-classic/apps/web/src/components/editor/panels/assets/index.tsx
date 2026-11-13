@@ -1,31 +1,36 @@
 "use client";
 
 import { Separator } from "@/components/ui/separator";
-import { type Tab, useAssetsPanelStore } from "@/components/editor/panels/assets/assets-panel-store";
+import {
+	type Tab,
+	useAssetsPanelStore,
+} from "@/components/editor/panels/assets/assets-panel-store";
 import { TabBar } from "./tabbar";
 import { Captions } from "@/subtitles/components/assets-view";
-import {NachoResources} from "./views/nacho-resources";
-import {NachoAssistant} from "./views/nacho-assistant";
-import {NachoGenerate} from "./views/nacho-generate";
+import { NachoResources } from "./views/nacho-resources";
+import { NachoAssistant } from "./views/nacho-assistant";
+import { NachoGenerate } from "./views/nacho-generate";
 import { MediaView } from "./views/assets";
 import { SettingsView } from "./views/settings";
 import { SoundsView } from "@/sounds/components/assets-view";
 import { StickersView } from "@/stickers/components/assets-view";
 import { TextView } from "@/text/components/assets-view";
 import { EffectsView } from "@/effects/components/assets-view";
-import {EliteMotion} from './views/elite-motion';
-import {EliteAudio} from './views/elite-audio';
+import { EliteMotion } from "./views/elite-motion";
+import { EliteAudio } from "./views/elite-audio";
+import { EliteZoom } from "./views/elite-zoom";
 
 export function AssetsPanel() {
 	const { activeTab } = useAssetsPanelStore();
 
 	const viewMap: Record<Tab, React.ReactNode> = {
- assistant:<NachoAssistant/>,
- generate:<NachoGenerate/>,
- nacho:<NachoResources/>,
+		zoom: <EliteZoom />,
+		assistant: <NachoAssistant />,
+		generate: <NachoGenerate />,
+		nacho: <NachoResources />,
 		media: <MediaView />,
 		sounds: <EliteAudio />,
-        background:<EffectsView category="background"/>,
+		background: <EffectsView category="background" />,
 		text: <TextView />,
 		stickers: <StickersView />,
 		effects: <EffectsView />,

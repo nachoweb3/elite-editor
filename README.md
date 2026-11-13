@@ -10,12 +10,16 @@ Elite Editor brings manual editing and local AI assistance into one workspace. S
 ## What you can do
 
 - **Edit on a real timeline:** media, video/audio tracks, text, trimming, splitting and keyframes through the adapted OpenCut editor.
+- **Animate zoom with diamonds:** save scale/position keyframes, move the playhead, focus a canvas zone and save the next frame. Native project animation, with editable curves and undo.
+- **Style editable text:** 20 title, lower-third, tutorial, quote and manual-caption presets, with editable content and duration.
 - **Ask for an edit, then review it:** improve an instruction, inspect before/after settings and proposed cuts, and apply the exact reviewed plan. Expired or stale plans are rejected.
 - **Analyze locally:** silence detection with FFmpeg, optional Whisper transcription and optional Ollama-assisted editing.
 - **Bring proposed cuts into the timeline:** import editable cuts and captions. Applying an enhanced source preserves linked clip timing and layers.
 - **Improve the source:** optional local facial retouching, noise reduction and voice normalization. Keep the original and switch back.
+- **Control the finish manually:** video denoise/sharpen, voice-noise reduction, high-pass and loudness controls; 14 beauty controls including bidirectional feature sizing. These are classic local filters and bounded warps, not a claim of generative restoration or guaranteed wrinkle removal.
 - **Illustrate explanations:** review locally generated stickman concepts, remove unsuitable ones and render them as overlays or inserted segments.
 - **Use bundled creative tools:** 10 GPU effects including chroma key, six entrance/exit presets and 188 bundled CC0 audio files (100 interface sounds, 85 jingles and three ambient variants).
+- **Find audio faster:** category filters, duration sorting, author/collection search and browser-local favorites.
 - **Generate optional assets:** the Open Generative AI catalog adapter exposes selected image/video models through MuAPI. Local editing does not require a provider key.
 
 The universe artwork above is brand artwork, not an application screenshot. We do not publish private project screenshots or claim features that have not been validated.

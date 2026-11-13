@@ -87,6 +87,14 @@ const faceControls = [
 	["faceEyes", "Detalle de ojos"],
 	["faceTeeth", "Blanqueado dental"],
 	["faceJaw", "Contorno facial"],
+	["faceWrinkles", "Suavizar arrugas y líneas"],
+	["faceTexture", "Detalle de piel"],
+	["faceWarmth", "Temperatura de piel · fría / cálida"],
+	["faceLipColor", "Intensidad del color de labios"],
+	["faceEyeSize", "Tamaño de ojos · reducir / ampliar"],
+	["faceNoseSize", "Tamaño de nariz · reducir / ampliar"],
+	["faceMouthSize", "Tamaño de boca · reducir / ampliar"],
+	["faceWidth", "Anchura facial · estrechar / ampliar"],
 ] as const;
 
 export function NachoAssistant() {
@@ -800,7 +808,41 @@ export function NachoAssistant() {
 						) : null}
 					</section>
 					<section className="space-y-3 rounded border p-3">
-						<h3 className="font-medium">Retoque facial</h3>
+						<h3 className="font-medium">Acabado de vídeo, voz y belleza</h3>
+						<p className="text-xs text-muted-foreground">
+							Ajusta manualmente, guarda y prepara el original mejorado. Después
+							aplícalo a tu timeline. Compara con el original; no se modifica tu
+							archivo de entrada.
+						</p>
+						<div className="flex flex-wrap gap-2">
+							{[
+								["Natural", 0.16, 0.1, 0.08, 0],
+								["Luz suave", 0.2, 0.25, 0.15, 0],
+								["Piel suave", 0.35, 0.12, 0.15, 0.25],
+								["Detalle", 0.08, 0.08, 0.05, 0],
+							].map(([label, smooth, light, under, wrinkles]) => (
+								<Button
+									key={label}
+									variant="outline"
+									size="sm"
+									disabled={disabled}
+									onClick={() =>
+										setFace((v) => ({
+											...v,
+											faceRetouch: true,
+											...Object.fromEntries(faceControls.map(([k]) => [k, 0])),
+											faceSmooth: Number(smooth),
+											faceLight: Number(light),
+											faceUnderEyes: Number(under),
+											faceWrinkles: Number(wrinkles),
+											faceTexture: label === "Detalle" ? 0.25 : 0,
+										}))
+									}
+								>
+									{label}
+								</Button>
+							))}
+						</div>
 						<label className="flex gap-2">
 							<input
 								type="checkbox"
@@ -821,13 +863,86 @@ export function NachoAssistant() {
 							/>
 							Limpiar ruido y normalizar voz
 						</label>
+						<details className="space-y-3 rounded border p-3" open>
+							<summary className="cursor-pointer text-xs font-medium">
+								Limpieza manual de vídeo y audio
+							</summary>
+							{(
+								[
+									["videoDenoise", "Reducir ruido de vídeo", 0, 1, 0.05, 0],
+									["videoSharpen", "Nitidez de vídeo", 0, 1, 0.05, 0],
+									[
+										"audioNoiseReduction",
+										"Reducción de ruido de voz · dB",
+										0,
+										30,
+										1,
+										12,
+									],
+									[
+										"audioHighpass",
+										"Filtro de graves · Hz (0 desactiva)",
+										0,
+										200,
+										5,
+										75,
+									],
+								] as const
+							).map(([key, label, min, max, step, fallback]) => (
+								<label key={key} className="block text-xs">
+									{label} ·{" "}
+									{Number(face[key] ?? fallback).toFixed(max === 1 ? 2 : 0)}
+									<input
+										type="range"
+										aria-label={label}
+										className="w-full"
+										min={min}
+										max={max}
+										step={step}
+										value={Number(face[key] ?? fallback)}
+										onChange={(e) =>
+											setFace((v) => ({ ...v, [key]: Number(e.target.value) }))
+										}
+									/>
+								</label>
+							))}
+							<label className="flex gap-2 text-xs">
+								<input
+									type="checkbox"
+									checked={face.audioNormalize !== false}
+									onChange={(e) =>
+										setFace((v) => ({ ...v, audioNormalize: e.target.checked }))
+									}
+								/>
+								Normalizar voz a −16 LUFS
+							</label>
+							<p className="text-xs text-muted-foreground">
+								Los controles de voz requieren activar Limpiar ruido y
+								normalizar voz. La reducción de ruido de vídeo es un filtro
+								clásico; no reconstruye detalle perdido con IA. Mucha reducción
+								puede suavizar texturas y movimiento.
+							</p>
+						</details>
+						<p className="text-xs font-medium">
+							Belleza · cero mantiene el rasgo original
+						</p>
 						{faceControls.map(([key, label]) => (
 							<label key={key} className="block text-xs">
 								{label} · {Math.round(Number(face[key] || 0) * 100)} %
 								<input
 									className="w-full"
 									type="range"
-									min="0"
+									min={
+										[
+											"faceEyeSize",
+											"faceNoseSize",
+											"faceMouthSize",
+											"faceWidth",
+											"faceWarmth",
+										].includes(key)
+											? "-1"
+											: "0"
+									}
 									max="1"
 									step="0.01"
 									value={Number(face[key] || 0)}

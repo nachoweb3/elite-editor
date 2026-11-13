@@ -28,3 +28,5 @@ jobs:
         working-directory: vendor/opencut-classic/apps/web
       - run: bun x tsc --noEmit
         working-directory: vendor/opencut-classic/apps/web
+      - run: bun test --preload ./tests/wasm-preload.ts ./apps/web/src/animation/__tests__/elite-zoom.test.ts
+        working-directory: vendor/opencut-classic

@@ -1,4 +1,5 @@
 import {faceDefaults,faceSettings} from './retouch-settings.mjs';
+import {sourceDefaults,sourceSettings} from './source-settings.mjs';
 import fs from 'node:fs/promises';
 import {existsSync} from 'node:fs';
 import path from 'node:path';
@@ -24,8 +25,8 @@ export async function run(command,args,{cwd=ROOT,log,timeout=24*3600*1000}={}){
 }
 export async function probe(file){const {out}=await run('ffprobe',['-v','error','-show_format','-show_streams','-of','json',file]);const p=JSON.parse(out),v=p.streams.find(s=>s.codec_type==='video');if(!v)throw new Error('El archivo no contiene vídeo');const duration=Number(p.format.duration||v.duration);if(!Number.isFinite(duration)||duration<=0)throw new Error('Duración de vídeo inválida');return {duration,width:v.width,height:v.height,fps:v.avg_frame_rate,audio:p.streams.some(s=>s.codec_type==='audio'),codec:v.codec_name};}
 export const MOTIONS=['none','dolly-in','dolly-out','zoom-crash','pan-left','pan-right','tilt-up','ken-burns'];
-export const defaults={...faceDefaults,style:'EDUCATIONAL',subtitle:'Tutorial',profile:'reels',fit:'contain',cropX:0.5,cropY:0.5,language:'es',subtitles:true,cleanAudio:true,exposure:0,contrast:1,saturation:1,transition:0,soundEffects:false,musicId:null,musicVolume:0.08,zoom:1,title:'',subtitlePosition:'bottom',encoder:'auto'};
-export function validateSettings(s){const result={...defaults,...s,...faceSettings(s)};
+export const defaults={...faceDefaults,...sourceDefaults,style:'EDUCATIONAL',subtitle:'Tutorial',profile:'reels',fit:'contain',cropX:0.5,cropY:0.5,language:'es',subtitles:true,cleanAudio:true,exposure:0,contrast:1,saturation:1,transition:0,soundEffects:false,musicId:null,musicVolume:0.08,zoom:1,title:'',subtitlePosition:'bottom',encoder:'auto'};
+export function validateSettings(s){const result={...defaults,...s,...faceSettings(s),...sourceSettings(s)};
   for(const [k,values] of Object.entries({style:['CINEMATIC','VIRAL','EDUCATIONAL'],subtitle:['Cinematic','Viral','Tutorial','Dark Future'],profile:['reels','tiktok','shorts','youtube','youtube4k'],fit:['contain','cover'],language:['es','en','auto'],subtitlePosition:['bottom','top'],encoder:['auto','cpu','nvenc']}))if(!values.includes(result[k]))throw new Error(`Ajuste inválido: ${k}`);
   for(const [k,min,max] of [['cropX',0,1],['cropY',0,1],['exposure',-0.15,0.15],['contrast',0.7,1.4],['saturation',0,1.5],['transition',0,0.5],['musicVolume',0,0.3],['zoom',1,1.18]])if(!Number.isFinite(result[k])||result[k]<min||result[k]>max)throw new Error(`Fuera de rango: ${k}`);
   for(const k of ['subtitles','cleanAudio','soundEffects'])if(typeof result[k]!=='boolean')throw new Error(`Ajuste inválido: ${k}`);

@@ -42,6 +42,13 @@ def enhance(frame,points,s):
     fine=cv2.GaussianBlur(src,(0,0),max(.8,fw*.012));detail=src-fine
     edge=np.clip((np.max(np.abs(detail),axis=2)-.03)/.085,0,1)
     out=src-detail*(s['faceSmooth']*.8*skin*(1-edge))[:,:,None]
+    # Low-amplitude local line softening, not semantic wrinkle removal.
+    broad=cv2.GaussianBlur(src,(0,0),max(1,fw*.022))
+    out+=(broad-src)*(s.get('faceWrinkles',0)*.42*skin*(1-edge))[:,:,None]
+    out+=detail*(s.get('faceTexture',0)*.35*skin)[:,:,None]
+    warmth=s.get('faceWarmth',0)*.045*skin
+    out[:,:,2]+=warmth
+    out[:,:,0]-=warmth
     lift=s['faceLight']*.18*skin
     out+=lift[:,:,None]*(1-out)
     for name in ['EYE_L','EYE_R']:
@@ -53,6 +60,10 @@ def enhance(frame,points,s):
     neutral=1-np.clip((src.max(2)-src.min(2))/.3,0,1)
     teeth=mouth*neutral*np.clip((lum-.4)/.3,0,1)
     out+=s['faceTeeth']*.18*teeth[:,:,None]*(1-out)
+    lip=np.clip(polygon(shape,p,REGIONS['LIPS_OUTER'])-polygon(shape,p,REGIONS['LIPS_INNER']),0,1)
+    lip=cv2.GaussianBlur(lip,(0,0),max(.6,fw*.004))
+    lip_mean=out.mean(2,keepdims=True)
+    out+=(out-lip_mean)*(s.get('faceLipColor',0)*.5*lip)[:,:,None]
     # Under-eye lift is feathered and follows the tracked eye centres.
     gy,gx=np.mgrid[:shape[0],:shape[1]]
     for eye in [REGIONS['EYE_L'],REGIONS['EYE_R']]:
@@ -60,12 +71,27 @@ def enhance(frame,points,s):
         mask=np.exp(-((gx-center[0])/(fw*.09))**2-((gy-center[1])/(fw*.035))**2)*skin
         out+=s['faceUnderEyes']*.12*mask[:,:,None]*(1-out)
     # Small local jaw displacement with smooth, bounded falloff (MIT reference).
-    if s['faceJaw']>0:
+    if s['faceJaw']>0 or any(abs(s.get(k,0))>0 for k in ['faceEyeSize','faceNoseSize','faceMouthSize','faceWidth']):
         mx=gx.astype(np.float32);my=gy.astype(np.float32);center=p[1]
         for idx in [172,397]:
             c=p[idx];radius=fw*.25;delta=(center-c)*s['faceJaw']*.07
             t=np.clip(np.sqrt((mx-c[0])**2+(my-c[1])**2)/radius,0,1);fall=1-t*t*(3-2*t)
             mx-=delta[0]*fall;my-=delta[1]*fall
+        # Inverse radial sampling: positive strength enlarges, negative shrinks.
+        # Compact support keeps the ROI boundary and the surrounding image fixed.
+        def resize_region(c,radius,strength,horizontal=False):
+            nonlocal mx,my
+            if not strength:return
+            dx=gx-c[0];dy=gy-c[1]
+            t=np.clip(np.sqrt(dx*dx+dy*dy)/radius,0,1)
+            fall=(1-t*t*(3-2*t))*.12*strength
+            mx-=dx*fall
+            if not horizontal:my-=dy*fall
+        resize_region(p[REGIONS['FACE_OVAL']].mean(0),fw*.55,s.get('faceWidth',0),True)
+        for eye in ['EYE_L','EYE_R']:
+            resize_region(p[REGIONS[eye]].mean(0),fw*.15,s.get('faceEyeSize',0))
+        resize_region(p[1],fw*.18,s.get('faceNoseSize',0))
+        resize_region(p[REGIONS['LIPS_OUTER']].mean(0),fw*.19,s.get('faceMouthSize',0))
         out=cv2.remap(out,mx,my,cv2.INTER_LINEAR,borderMode=cv2.BORDER_REFLECT_101)
     result=frame.copy();result[y:yy,x:xx]=np.rint(np.clip(out*255,0,255)).astype(np.uint8);return result
 

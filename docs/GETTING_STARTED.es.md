@@ -45,7 +45,17 @@ Genera y revisa el vídeo. Biblioteca permite importar el render terminado como 
 
 ## 8. Audio, efectos y fondos
 
+**Zoom con rombos:** selecciona un clip de vídeo o imagen y abre **Zoom ◆**. Coloca el cabezal al inicio y pulsa Guardar encuadre aquí. Avanza, aumenta el zoom, elige una zona y afina X/Y. Guarda el segundo rombo. Los botones ◆ permiten saltar entre encuadres y Quitar rombo actual elimina los keyframes de encuadre en ese punto. El selector de zonas es una cuadrícula del lienzo, no un rectángulo dibujado sobre la imagen. Los keyframes nativos conservan el recorrido en el proyecto; comprueba el movimiento y ajusta sus curvas en el inspector.
+
+**Estudio de textos:** en Texto tienes 20 estilos organizados en títulos, rótulos, tutorial, citas y subtítulos manuales. Escribe contenido, elige duración y añade el estilo al cabezal. Aplicar estilo cambia la apariencia de textos seleccionados conservando contenido, posición, duración y animaciones. Los controles del inspector permiten seguir personalizando el resultado. Las fuentes dependen del equipo.
+
+**Belleza y limpieza manual:** en Asistente IA → Acabado de vídeo, voz y belleza tienes reducción de ruido de vídeo, nitidez, reducción de ruido de voz, filtro de graves y normalización. Los controles de voz requieren activar la limpieza de audio. Guarda, prepara el original mejorado y aplícalo a la timeline; no son filtros faciales en tiempo real.
+
+Belleza ofrece 14 controles: suavidad, luz, ojeras, ojos, dientes, mandíbula, suavizado de líneas, detalle de piel, temperatura, intensidad de labios, tamaño de ojos/nariz/boca y anchura facial. Los tamaños admiten valores negativos y positivos; cero mantiene el rasgo. El suavizado de arrugas es una reducción local de líneas y textura, no una eliminación semántica garantizada. Se sigue un rostro; revisa giros y oclusiones. Cuatro presets ayudan a empezar y dejan neutros los cambios de tamaño.
+
 Escucha los recursos incluidos antes de añadirlos. Coloca el cabezal donde quieras comenzar el sonido y ajusta volumen/duración. Comprueba que la música no tape la voz.
+
+Filtra por categoría o tipo, ordena por nombre/duración y marca ★ para guardar favoritos en este navegador. La búsqueda incluye nombre, colección y autor. Si no aparece nada, quita los filtros o Favoritos.
 
 Selecciona el clip al aplicar efectos. Las entradas/salidas animan un clip; no son disoluciones reales entre dos clips. Chroma key quita un color uniforme y requiere ajustar tolerancia/bordes. No equivale a segmentación IA de una persona.
 
