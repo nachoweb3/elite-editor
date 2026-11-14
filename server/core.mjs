@@ -20,7 +20,7 @@ export async function json(file){return JSON.parse(await fs.readFile(file,'utf8'
 const ASSET_REGISTRY=path.join(ROOT,'config/assets.json');
 export function resolveAssetFile(file){
  if(typeof file!=='string'||!file)return file;
- if(!path.isAbsolute(file))return path.join(ROOT,file);
+ if(!path.isAbsolute(file)&&!path.win32.isAbsolute(file))return path.join(ROOT,file);
  if(existsSync(file))return file;
  const normalized=file.replace(/\\/g,'/');
  for(const marker of ['/resources/','/input/assets/']){const i=normalized.lastIndexOf(marker);if(i>=0){const candidate=path.join(ROOT,normalized.slice(i+1));if(existsSync(candidate))return candidate;}}
