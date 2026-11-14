@@ -19,7 +19,7 @@ await build({entryPoints:[path.join(web,'src/app/page.tsx')],outfile:output,bund
 }}]});
 const {default:Home}=await import(pathToFileURL(output));
 const revision=execFileSync('git',['rev-parse','--short','HEAD'],{cwd:root,encoding:'utf8'}).trim();
-let markup=renderToStaticMarkup(await Home());
+let markup=renderToStaticMarkup(await Home()).replaceAll('src="/elite-mark.svg"','src="assets/elite-mark.svg"');
 const access=`<section class="lp lp-section" id="abrir-editor"><div class="lp-wrap"><p class="lp-kicker">Editor local · código actualizado ${revision}</p><h2 class="lp-h2">Entra a tu estudio</h2><p class="lp-lead">Si Elite Editor ya está arrancado en este equipo, abre tus proyectos. Esta página es la presentación pública; el editor y el procesamiento de vídeo funcionan en tu ordenador.</p><div class="lp-cta"><a class="lp-btn lp-btn-primary" href="http://127.0.0.1:5181/projects">Abrir mi editor local →</a><a class="lp-btn lp-btn-ghost" href="https://github.com/nachoweb3/elite-editor">Instalar la versión actual →</a></div><p>Primera instalación: sigue el README del repositorio. La versión actual incluye la biblioteca Recursos y las herramientas de creadores disponibles. Los packs Forge todavía en desarrollo aparecen como pendientes.</p><p><a href="https://github.com/nachoweb3/elite-editor-landing/releases/tag/v0.2.0-beta">Paquetes beta 0.2 anteriores</a> · Estos paquetes todavía no contienen todos los cambios nuevos.</p><p>Created totally free by @nacho_web3 · Innovation is our flag.</p></div></section>`;
 markup=markup.replace(/<footer /,access+'<footer ');
 const css=(await fs.readFile(path.join(web,'src/app/xeno.css'),'utf8'))+'\n'+(await fs.readFile(path.join(web,'src/app/landing.css'),'utf8'));
