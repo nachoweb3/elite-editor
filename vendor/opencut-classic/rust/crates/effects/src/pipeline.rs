@@ -274,7 +274,8 @@ fn pack_effect_uniforms(
     if shader == "elite" {
         let values = read_vec4_uniform(pass, "u_values")?;
         let extra = read_vec4_uniform(pass, "u_extra")?;
-        return Ok(EffectUniformBuffer { resolution: [width as f32, height as f32], direction: [0.0,0.0], scalars: values, extra });
+        let direction = if pass.uniforms.contains_key("u_direction") { read_vec2_uniform(pass, "u_direction")? } else { [0.0,0.0] };
+        return Ok(EffectUniformBuffer { resolution: [width as f32, height as f32], direction, scalars: values, extra });
     }
     let sigma = read_number_uniform(pass, "u_sigma")?;
     let step = read_number_uniform(pass, "u_step")?;

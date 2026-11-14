@@ -36,6 +36,8 @@ try{
  await act(async()=>{const s=document.querySelector('select');s.value='source';s.dispatchEvent(new Event('change',{bubbles:true}));});
  await click('Añadir cortes y subtítulos a la timeline');
  assert.equal(tracks.main.elements.length,1);assert.equal(tracks.main.elements[0].trimStart,2000000);assert.equal(tracks.main.elements[0].duration,3000000);assert.equal(tracks.main.elements[0].trimEnd,15000000);assert.equal(tracks.overlay[0].elements[0].params.content,'Hola');assert.equal(command.before.main.elements.length,0);
+ // Canvas Y grows downwards: default captions sit at the bottom, sized to fit the frame.
+ const caption=tracks.overlay[0].elements[0].params;assert(caption['transform.positionY']>0);assert(caption.fontSize<=6&&caption.fontSize>=2.2);assert.equal(caption['background.enabled'],true);
  const unchanged=structuredClone(tracks);
  await click('Aplicar mejora a mi timeline');assert.equal(tracks.main.elements[0].mediaId,'enhanced');assert.deepEqual({...tracks.main.elements[0],mediaId:'asset'},unchanged.main.elements[0]);assert.deepEqual(tracks.overlay,unchanged.overlay);
  await click('Volver al original en la timeline');assert.deepEqual(tracks,unchanged);

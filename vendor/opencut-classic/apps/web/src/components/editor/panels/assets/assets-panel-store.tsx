@@ -2,16 +2,21 @@ import type { ElementType } from "react";
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
 import {
-	ArrowRightDoubleIcon,
+	AiMagicIcon,
 	ClosedCaptionIcon,
 	Folder03Icon,
 	Happy01Icon,
 	HeadphonesIcon,
+	ImageRemoveIcon,
+	LibraryIcon,
 	MagicWand05Icon,
+	PackageSearchIcon,
 	TextIcon,
 	Settings01Icon,
-	SlidersHorizontalIcon,
-	ColorsIcon,
+	SparklesIcon,
+	Sun03Icon,
+	TransitionRightIcon,
+	ZoomInAreaIcon,
 } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon, type IconSvgElement } from "@hugeicons/react";
 
@@ -21,6 +26,7 @@ export const TAB_KEYS = [
 	"assistant",
 	"generate",
 	"nacho",
+	"library",
 	"media",
 	"sounds",
 	"text",
@@ -42,24 +48,28 @@ const createHugeiconsIcon =
 
 export const tabs = {
 	zoom: {
-		icon: createHugeiconsIcon({ icon: SlidersHorizontalIcon }),
+		icon: createHugeiconsIcon({ icon: ZoomInAreaIcon }),
 		label: "Zoom ◆",
 	},
 	background: {
-		icon: createHugeiconsIcon({ icon: SlidersHorizontalIcon }),
+		icon: createHugeiconsIcon({ icon: ImageRemoveIcon }),
 		label: "Quitar fondo",
 	},
 	assistant: {
-		icon: createHugeiconsIcon({ icon: MagicWand05Icon }),
+		icon: createHugeiconsIcon({ icon: AiMagicIcon }),
 		label: "Asistente IA",
 	},
 	generate: {
-		icon: createHugeiconsIcon({ icon: ColorsIcon }),
+		icon: createHugeiconsIcon({ icon: SparklesIcon }),
 		label: "Crear con IA",
 	},
 	nacho: {
-		icon: createHugeiconsIcon({ icon: Folder03Icon }),
+		icon: createHugeiconsIcon({ icon: LibraryIcon }),
 		label: "Biblioteca Elite",
+	},
+	library: {
+		icon: createHugeiconsIcon({ icon: PackageSearchIcon }),
+		label: "Recursos",
 	},
 	media: {
 		icon: createHugeiconsIcon({ icon: Folder03Icon }),
@@ -82,7 +92,7 @@ export const tabs = {
 		label: "Efectos",
 	},
 	transitions: {
-		icon: createHugeiconsIcon({ icon: ArrowRightDoubleIcon }),
+		icon: createHugeiconsIcon({ icon: TransitionRightIcon }),
 		label: "Transiciones",
 	},
 	captions: {
@@ -90,8 +100,8 @@ export const tabs = {
 		label: "Subtítulos",
 	},
 	adjustment: {
-		icon: createHugeiconsIcon({ icon: SlidersHorizontalIcon }),
-		label: "Ajustes",
+		icon: createHugeiconsIcon({ icon: Sun03Icon }),
+		label: "Color y luz",
 	},
 	settings: {
 		icon: createHugeiconsIcon({ icon: Settings01Icon }),

@@ -19,5 +19,25 @@ fn chroma(c:vec3f)->vec2f { return vec2f(dot(c,vec3f(-0.168736,-0.331264,0.5)),d
  }
  if(mode==7){c=c+vec3f(amount*0.12,0.0,-amount*0.12);}
  if(mode==8){let t=1.0/u.resolution;let around=textureSample(input_texture,input_sampler,uv+vec2f(t.x,0.0)).rgb+textureSample(input_texture,input_sampler,uv-vec2f(t.x,0.0)).rgb+textureSample(input_texture,input_sampler,uv+vec2f(0.0,t.y)).rgb+textureSample(input_texture,input_sampler,uv-vec2f(0.0,t.y)).rgb;c=c+amount*(4.0*c-around);}
+ // Local, edge-aware portrait finish. Ellipse is user positioned, not face tracking.
+ if(mode==9){
+   let radius=max(u.extra.zw*0.5,vec2f(0.01));
+   let distance=length((uv-u.extra.xy)/radius);
+   let mask=1.0-smoothstep(0.65,1.0,distance);
+   let step=max(vec2f(1.0),u.resolution/400.0)/u.resolution;
+   var average=vec3f(0.0);var weight_sum=0.0;
+   for(var iy:i32=-1;iy<=1;iy=iy+1){for(var ix:i32=-1;ix<=1;ix=ix+1){
+     let neighbor=textureSample(input_texture,input_sampler,uv+vec2f(f32(ix),f32(iy))*step).rgb;
+     let delta=neighbor-source.rgb;
+     let weight=exp(-dot(delta,delta)*36.0);
+     average+=neighbor*weight;weight_sum+=weight;
+   }}
+   average/=max(weight_sum,0.0001);
+   let detail=source.rgb-average;
+   c=source.rgb-detail*amount*0.85*mask;
+   c+=u.scalars.z*0.22*mask*(1.0-c);
+   c+=vec3f(u.scalars.w*0.07,0.0,-u.scalars.w*0.07)*mask;
+   c+=detail*u.direction.x*0.6*mask;
+ }
  return vec4f(clamp(c,vec3f(0.0),vec3f(1.0)),alpha);
 }

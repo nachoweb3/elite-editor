@@ -42,7 +42,7 @@ export default function Editor() {
 	return (
 		<MobileGate>
 			<EditorProvider projectId={projectId}>
-				<div className="bg-background flex h-screen w-screen flex-col overflow-hidden">
+				<div className="xeno-shell bg-background flex h-screen w-screen flex-col overflow-hidden">
 					<DegradedRendererBanner />
 					<EditorHeader />
 					<div className="min-h-0 min-w-0 flex-1">
@@ -64,13 +64,13 @@ function DegradedRendererBanner() {
 
 	return (
 		<div className="bg-accent border-b h-9 flex items-center justify-center gap-2 text-xs text-muted-foreground">
-			<span>For the best experience, open OpenCut in Chrome.</span>
+			<span>Para la mejor experiencia, abre Elite Editor en Chrome o Edge.</span>
 			<Button
 				variant="text"
 				size="icon"
 				className="p-0 w-auto [&_svg]:size-3.5"
 				onClick={() => setDismissed(true)}
-				aria-label="Dismiss"
+				aria-label="Cerrar aviso"
 			>
 				<HugeiconsIcon icon={Cancel01Icon} />
 			</Button>

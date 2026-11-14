@@ -60,8 +60,9 @@ export function TabBar() {
 									variant={activeTab === tabKey ? "secondary" : "ghost"}
 									size="icon"
 									aria-label={tab.label}
+									data-active={activeTab === tabKey}
 									className={cn(
-										"shrink-0",
+										"xeno-tab shrink-0",
 										"h-8 w-8",
 										activeTab !== tabKey && "text-muted-foreground",
 									)}

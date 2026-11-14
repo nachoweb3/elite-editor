@@ -6,21 +6,48 @@ import path from 'node:path';
 import {fileURLToPath} from 'node:url';
 import {spawn} from 'node:child_process';
 import {randomUUID} from 'node:crypto';
+import {AsyncLocalStorage} from 'node:async_hooks';
 export const ROOT=path.resolve(path.dirname(fileURLToPath(import.meta.url)),'..');
 const portablePython=path.join(ROOT,'runtime/python/python.exe');
 export const python=process.env.ELITE_PYTHON || (existsSync(portablePython)?portablePython:path.join(ROOT,'runtime/venv',process.platform==='win32'?'Scripts/python.exe':'bin/python'));
+// Every folder the engine writes to. Created at startup too, so a fresh clone never fails mid-render.
+export const DATA_DIRS=['config','cache','logs','projects','models','runtime','subtitles','thumbnails','input/raw_videos','input/assets','input/audio','input/memes','input/sonidos','output/previews','output/reels','output/shorts','output/youtube'];
+export async function ensureDirectories(){await Promise.all(DATA_DIRS.map(dir=>fs.mkdir(path.join(ROOT,dir),{recursive:true})));}
 export async function config(){return JSON.parse(await fs.readFile(path.join(ROOT,'config/studio.json'),'utf8'));}
 export async function json(file){return JSON.parse(await fs.readFile(file,'utf8'));}
+// Asset files inside the checkout are stored relative to it, so the folder can be moved or
+// cloned. Older absolute entries are re-anchored by their resources/ or input/assets/ tail.
+const ASSET_REGISTRY=path.join(ROOT,'config/assets.json');
+export function resolveAssetFile(file){
+ if(typeof file!=='string'||!file)return file;
+ if(!path.isAbsolute(file))return path.join(ROOT,file);
+ if(existsSync(file))return file;
+ const normalized=file.replace(/\\/g,'/');
+ for(const marker of ['/resources/','/input/assets/']){const i=normalized.lastIndexOf(marker);if(i>=0){const candidate=path.join(ROOT,normalized.slice(i+1));if(existsSync(candidate))return candidate;}}
+ return file;
+}
+export function storedAssetFile(file){if(typeof file!=='string'||!file)return file;const rel=path.relative(ROOT,file);return rel&&!rel.startsWith('..')&&!path.isAbsolute(rel)?rel.split(path.sep).join('/'):file;}
+export async function readAssets(){let entries;try{entries=await json(ASSET_REGISTRY);}catch(e){if(e.code==='ENOENT')return [];throw new Error('config/assets.json está dañado: '+e.message);}return (Array.isArray(entries)?entries:[]).map(a=>({...a,file:resolveAssetFile(a.file)}));}
+export async function writeAssets(entries){await atomic(ASSET_REGISTRY,entries.map(a=>({...a,file:storedAssetFile(a.file)})));}
 export async function atomic(file,data){const temp=file+'.'+randomUUID()+'.tmp';await fs.writeFile(temp,JSON.stringify(data,null,2),'utf8');for(let attempt=0;;attempt++){try{await fs.rename(temp,file);return;}catch(e){if(attempt>=10||!['EPERM','EBUSY','EACCES'].includes(e.code)){await fs.unlink(temp).catch(()=>{});throw e;}await new Promise(r=>setTimeout(r,25*(attempt+1)));}}}
 export function projectDir(id){if(!/^[a-f0-9-]{36}$/.test(id))throw new Error('ID de proyecto inválido');return path.join(ROOT,'projects',id);}
 export async function load(id){return json(path.join(projectDir(id),'project.json'));}
 export async function save(p){p.updatedAt=new Date().toISOString();await atomic(path.join(projectDir(p.id),'project.json'),p);return p;}
 export async function list(){const dirs=await fs.readdir(path.join(ROOT,'projects'));const all=await Promise.all(dirs.filter(x=>/^[a-f0-9-]{36}$/.test(x)).map(x=>load(x).catch(()=>null)));return all.filter(Boolean).sort((a,b)=>b.updatedAt.localeCompare(a.updatedAt));}
-export async function run(command,args,{cwd=ROOT,log,timeout=24*3600*1000}={}){
-  return new Promise((resolve,reject)=>{const child=spawn(command,args,{cwd,windowsHide:true,stdio:['ignore','pipe','pipe']});let out='',err='';
-    const timer=setTimeout(()=>{child.kill();reject(new Error('Tiempo máximo del proceso excedido'));},timeout);
+// Jobs run inside this context; every process started by a job inherits its cancel signal.
+export const jobContext=new AsyncLocalStorage();
+export class Cancelled extends Error{constructor(){super('Cancelado por el usuario');this.name='Cancelled';}}
+// Python workers may start their own FFmpeg children: stop the whole tree.
+function stopTree(child){if(child.exitCode!==null||!child.pid)return;if(process.platform==='win32')spawn('taskkill',['/pid',String(child.pid),'/T','/F'],{windowsHide:true,stdio:'ignore'}).on('error',()=>child.kill());else child.kill('SIGTERM');}
+export async function run(command,args,{cwd=ROOT,log,timeout=24*3600*1000,signal=jobContext.getStore()?.signal}={}){
+  if(signal?.aborted)throw new Cancelled();
+  return new Promise((resolve,reject)=>{const child=spawn(command,args,{cwd,windowsHide:true,stdio:['ignore','pipe','pipe']});let out='',err='',settled=false;
+    const finish=(fn,value)=>{if(settled)return;settled=true;clearTimeout(timer);signal?.removeEventListener('abort',abort);fn(value);};
+    const abort=()=>{stopTree(child);finish(reject,new Cancelled());};
+    const timer=setTimeout(()=>{stopTree(child);finish(reject,new Error('Tiempo máximo del proceso excedido'));},timeout);
+    signal?.addEventListener('abort',abort,{once:true});
     child.stdout.on('data',d=>{out=(out+d).slice(-8_000_000);});child.stderr.on('data',d=>{err=(err+d).slice(-300_000);if(log)log(d.toString());});
-    child.on('error',e=>{clearTimeout(timer);reject(e);});child.on('close',code=>{clearTimeout(timer);if(code===0)resolve({out,err});else reject(new Error(`${path.basename(command)} (${code}): ${err.slice(-6000)}`));});
+    child.on('error',e=>finish(reject,e));child.on('close',code=>{if(code===0)finish(resolve,{out,err});else finish(reject,new Error(`${path.basename(command)} (${code}): ${err.slice(-6000)}`));});
   });
 }
 export async function probe(file){const {out}=await run('ffprobe',['-v','error','-show_format','-show_streams','-of','json',file]);const p=JSON.parse(out),v=p.streams.find(s=>s.codec_type==='video');if(!v)throw new Error('El archivo no contiene vídeo');const duration=Number(p.format.duration||v.duration);if(!Number.isFinite(duration)||duration<=0)throw new Error('Duración de vídeo inválida');return {duration,width:v.width,height:v.height,fps:v.avg_frame_rate,audio:p.streams.some(s=>s.codec_type==='audio'),codec:v.codec_name};}

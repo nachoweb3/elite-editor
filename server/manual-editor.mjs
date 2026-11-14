@@ -1,5 +1,4 @@
-import {load,save,validateSettings,json,ROOT,MOTIONS} from './core.mjs';
-import path from 'node:path';
+import {load,save,validateSettings,MOTIONS,readAssets} from './core.mjs';
 import {validateTracks} from './audio-tracks.mjs';
 export function validateManualClips(clips,sources){
  if(!Array.isArray(clips)||!clips.length||clips.length>2000)throw new Error('Añade entre 1 y 2000 clips');
@@ -9,7 +8,7 @@ export async function saveManual(id,body){
  const p=await load(id);if(p.revision!==body.revision)throw new Error('El montaje cambió. Recarga antes de guardar');
  const sources=new Map();if(!Array.isArray(body.clips)||(!body.clips.length&&!p.blank)||body.clips.length>2000)throw new Error('Añade entre 1 y 2000 clips');for(const c of body.clips){if(!sources.has(c.sourceId))sources.set(c.sourceId,await load(c.sourceId));}
  const clips=body.clips.length?validateManualClips(body.clips,sources):[],settings=validateSettings(body.settings);
- const audioTracks=validateTracks(body.audioTracks??p.audioTracks??[],await json(path.join(ROOT,'config/assets.json')));
+ const audioTracks=validateTracks(body.audioTracks??p.audioTracks??[],await readAssets());
  p.history=[...(p.history||[]),{audioTracks:p.audioTracks||[],settings:p.settings,clips:p.clips,transcript:p.transcript,manual:p.manual===true,automatic:structuredClone(p.automatic??null)}].slice(-20);p.clips=clips;p.audioTracks=audioTracks;p.settings=settings;p.revision++;p.reviewed=true;p.artifacts={};p.manual=true;
  // Keep contextual resources anchored to an occurrence of the original speech.
  if(p.automatic?.direction){for(const key of ['events','media'])p.automatic.direction[key]=(p.automatic.direction[key]||[]).flatMap(e=>{let offset=0;for(const c of clips){if(c.sourceId===id&&e.at>=c.start&&e.at<c.end)return [{...e,outputTime:offset+e.at-c.start}];offset+=c.end-c.start;}return [];});}

@@ -10,9 +10,9 @@ export function EmptyView() {
 				strokeWidth={1}
 			/>
 			<div className="flex flex-col gap-2 text-center">
-				<p className="text-lg font-medium ">It's empty here</p>
+				<p className="text-lg font-medium ">Nada seleccionado</p>
 				<p className="text-muted-foreground text-sm text-balance">
-					Click an element on the timeline to edit its properties
+					Haz clic en un elemento de la timeline para editar sus propiedades
 				</p>
 			</div>
 		</div>

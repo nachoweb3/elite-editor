@@ -24,17 +24,33 @@ Comprueba que no se pierden palabras ni explicaciones. Añadir cortes y subtítu
 
 Enviar mis cortes al motor admite una pista principal formada por el original vinculado, a velocidad normal y sin huecos. Las capas, textos y efectos manuales no se sincronizan de vuelta al motor. Si tu montaje es más complejo, exporta desde la timeline.
 
-## 5. Edita con instrucciones
+## 5. Edita por texto
 
-Prueba «elimina los primeros 5 segundos» o «sube un poco el contraste». Mejorar instrucción ayuda a redactar. Ver qué cambiaría muestra valores y recortes. Aplica después de revisar. La propuesta caduca a los cinco minutos y también deja de ser válida si cambia el proyecto.
+Con la transcripción lista, **Editar por texto** muestra cada frase con su tiempo. Pulsa ▶ para escucharla en el original, **Quitar** para sacarla de la propuesta y **Recuperar** para devolverla. Las frases tachadas están fuera del montaje; ◐ indica que solo una parte lo está. Usa el buscador para encontrar una frase concreta.
+
+**Buscar muletillas** encuentra sonidos de duda («eh», «mmm») y repeticiones inmediatas («que que», «vamos a vamos a»). Revisa la lista y pulsa **Quitar** para recortarlas todas de una vez. Puedes añadir tus propias muletillas en `config/studio.json` → `fillers`.
+
+Los enlaces **SRT**, **VTT** y **Texto** descargan los subtítulos del montaje actual sin necesidad de renderizar. Todo cambio se puede deshacer con **Deshacer** en la sección de instrucciones.
+
+Encima de la transcripción verás el **mapa del original** (en verde lo que queda en el montaje; haz clic para escuchar ese punto) y las **estadísticas**: duración antes y después, palabras por minuto, porcentaje de voz y pausa más larga.
+
+- **Palabra a palabra:** pulsa el texto de una frase para ver sus palabras. Marca la primera y la última del tramo y pulsa «Quitar N palabras».
+- **Corregir:** el botón ✎ edita el texto de una frase; si el número de palabras no cambia, se conservan sus tiempos reales. «Corregir palabras · buscar y reemplazar» arregla un nombre mal transcrito en todo el vídeo y, si quieres, lo recuerda para futuras transcripciones.
+- **Ritmo:** elige la pausa máxima y pulsa «Buscar pausas largas»; al acortarlas se deja siempre un respiro de 0,25 s.
+
+## 6. Edita con instrucciones
+
+Prueba «elimina los primeros 5 segundos», «quita del 1:05 al 1:30», «sube un poco el contraste», «ponlo en blanco y negro» o «subtítulos arriba». Mejorar instrucción ayuda a redactar. Ver qué cambiaría muestra valores y recortes, y una etiqueta indica si lo interpretaron las **reglas locales** (exactas, sin IA) o la **IA local (Ollama)**. Aplica después de revisar. La propuesta caduca a los cinco minutos y también deja de ser válida si cambia el proyecto.
+
+Las instrucciones funcionan aunque Ollama no esté instalado: las reglas locales entienden cortes con tiempos explícitos y ajustes habituales de luz, color, zoom, música, subtítulos, voz y belleza, en español e inglés. Nunca inventan tiempos: «quita los primeros segundos» sin número se rechaza.
 
 Aplicar una instrucción modifica la propuesta del motor, no todas tus capas del editor. Añade los cortes revisados cuando corresponda. El asistente no puede ejecutar cualquier función que imagines: las peticiones no soportadas deben mostrar un aviso.
 
-## 6. Mejora rostro y voz
+## 7. Mejora rostro y voz
 
 Guarda los controles de retoque/limpieza, prepara el original mejorado y aplica esa fuente a la timeline. El proceso conserva tiempos y capas de los clips vinculados. Puedes volver al original para comparar. Comprueba especialmente piel, ojos, dientes y bordes del rostro en movimiento; sube los controles con moderación.
 
-## 7. Usa stickman cuando aporte algo
+## 8. Usa stickman cuando aporte algo
 
 Con la transcripción preparada, abre Explicar con stickman y detecta conceptos. Lee cada titular y pie; quita las fichas que no representen lo que dices.
 
@@ -43,9 +59,11 @@ Con la transcripción preparada, abre Explicar con stickman y detecta conceptos.
 
 Genera y revisa el vídeo. Biblioteca permite importar el render terminado como un clip único. Las ilustraciones aún no se transfieren como capas independientes. Revisa el ritmo después de intercalar.
 
-## 8. Audio, efectos y fondos
+## 9. Audio, efectos y fondos
 
-**Zoom con rombos:** selecciona un clip de vídeo o imagen y abre **Zoom ◆**. Coloca el cabezal al inicio y pulsa Guardar encuadre aquí. Avanza, aumenta el zoom, elige una zona y afina X/Y. Guarda el segundo rombo. Los botones ◆ permiten saltar entre encuadres y Quitar rombo actual elimina los keyframes de encuadre en ese punto. El selector de zonas es una cuadrícula del lienzo, no un rectángulo dibujado sobre la imagen. Los keyframes nativos conservan el recorrido en el proyecto; comprueba el movimiento y ajusta sus curvas en el inspector.
+**Zoom con rombos:** selecciona un clip de vídeo o imagen y abre **Zoom ◆**. Coloca el cabezal al inicio y pulsa Guardar encuadre aquí. Avanza, aumenta el zoom, elige una zona y afina X/Y. Guarda el segundo rombo. Los botones ◆ permiten saltar entre encuadres y Quitar rombo actual elimina los keyframes de encuadre en ese punto.
+
+**Movimiento automático:** con el clip seleccionado, un clic crea un acercamiento o alejamiento lento (efecto Ken Burns) o un paneo a lo largo de todo el clip. **Punch-in en el cabezal** salta a un encuadre un 20 % más cercano justo donde está el cabezal, ideal para enfatizar una frase. **Quitar todos los rombos** devuelve el clip a su encuadre fijo. El selector de zonas es una cuadrícula del lienzo, no un rectángulo dibujado sobre la imagen. Los keyframes nativos conservan el recorrido en el proyecto; comprueba el movimiento y ajusta sus curvas en el inspector.
 
 **Estudio de textos:** en Texto tienes 20 estilos organizados en títulos, rótulos, tutorial, citas y subtítulos manuales. Escribe contenido, elige duración y añade el estilo al cabezal. Aplicar estilo cambia la apariencia de textos seleccionados conservando contenido, posición, duración y animaciones. Los controles del inspector permiten seguir personalizando el resultado. Las fuentes dependen del equipo.
 
@@ -57,17 +75,25 @@ Escucha los recursos incluidos antes de añadirlos. Coloca el cabezal donde quie
 
 Filtra por categoría o tipo, ordena por nombre/duración y marca ★ para guardar favoritos en este navegador. La búsqueda incluye nombre, colección y autor. Si no aparece nada, quita los filtros o Favoritos.
 
-Selecciona el clip al aplicar efectos. Las entradas/salidas animan un clip; no son disoluciones reales entre dos clips. Chroma key quita un color uniforme y requiere ajustar tolerancia/bordes. No equivale a segmentación IA de una persona.
+Selecciona el clip al aplicar efectos. En Transiciones elige Entrada, Salida o Ambas, la duración y la curva (suave o lineal); los nueve estilos parten de la posición y escala actuales del clip. Las entradas/salidas animan un clip; no son disoluciones reales entre dos clips. Chroma key quita un color uniforme y requiere ajustar tolerancia/bordes. No equivale a segmentación IA de una persona.
 
 Los movimientos de cámara del motor anterior están en sus renders; todavía no pasan a keyframes nativos de OpenCut.
 
-## 9. Exporta y comprueba
+## 10. Exporta y publica desde el asistente
+
+Cuando la propuesta te convenza, pulsa **Aprobar propuesta**: sin aprobación no se renderiza nada. En **Exportar y publicar** elige el formato (YouTube 16:9, Reels/TikTok/Shorts 9:16 o 4K) y pulsa **Render final en calidad máxima**; al terminar puedes descargar el MP4 y sus subtítulos SRT/ASS.
+
+- **Miniatura:** mueve el control hasta el fotograma que quieras, escribe un texto opcional y pulsa «Crear miniatura». Respeta el formato del proyecto.
+- **Títulos, descripción y capítulos:** «Preparar publicación» propone títulos, descripción, hashtags y capítulos con marcas de tiempo del montaje. Con Ollama los redacta la IA local; sin ella, las reglas locales preparan un borrador. Cada bloque tiene su botón Copiar.
+- Al llevar subtítulos a la timeline puedes elegir **palabras por subtítulo**: 1 o 2 para vídeos cortos dinámicos, 5 para frases completas.
+
+## 11. Exporta y comprueba
 
 Reproduce el principio, algunos cortes y el final. Revisa voz, subtítulos, música, encuadre y duración. Exportar desde OpenCut incluye tus capas manuales. Un render del motor corresponde a su propia propuesta y ajustes.
 
 Abre el archivo final fuera del editor y comprueba sonido e imagen. Una exportación MP4 es el vídeo terminado; no conserva una timeline editable.
 
-## 10. Vuelve sin perder el trabajo
+## 12. Vuelve sin perder el trabajo
 
 Mantén el mismo navegador y http://127.0.0.1:5181. Los proyectos de timeline y medios se guardan en datos del navegador; los proyectos del asistente y originales se guardan en disco. No limpies los datos del sitio ni cambies de perfil esperando encontrar automáticamente los mismos proyectos. Conserva tus originales y exportaciones; la sincronización en la nube no está implementada.
 
@@ -77,8 +103,9 @@ Mantén el mismo navegador y http://127.0.0.1:5181. Los proyectos de timeline y 
 |---|---|
 | La página no abre | Revisa la terminal del launcher y que ambos servicios estén listos. No abras varias copias en los mismos puertos. |
 | Faltan sonidos | Instala FFmpeg/ffprobe en PATH y vuelve a ejecutar `npm run setup`. |
-| No transcribe | Ejecuta `npm run doctor`; comprueba Python y el modelo instalado. |
-| Las instrucciones no responden | Comprueba Ollama en ejecución y el modelo indicado en el README. |
+| No transcribe | Abre **Estado del motor** en el asistente o ejecuta `npm run doctor`; comprueba Python y el modelo instalado. |
+| Las instrucciones no responden | Las reglas locales funcionan sin Ollama; si una frase no se entiende, usa tiempos y ajustes concretos. Para la IA, comprueba Ollama y el modelo indicado en el README. |
+| Un trabajo tarda demasiado | Pulsa **Cancelar trabajo**: detiene el proceso al instante y puedes relanzarlo. Si falla, **Ver registro** muestra el detalle. |
 | El retoque falla | Comprueba el modelo Face Landmarker y las dependencias Python. |
 | Un resultado IA no aparece en la timeline | Revisa si aún es una propuesta del motor pendiente de importar o una mejora de fuente pendiente de aplicar. |
 | Falla una generación externa | Revisa su estado/historial del proveedor antes de repetirla para evitar cargos duplicados. |

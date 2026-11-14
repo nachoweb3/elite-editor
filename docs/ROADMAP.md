@@ -5,7 +5,8 @@ Our priority is a useful, reliable free local editor. These are planned mileston
 ## 1. Trust the edit
 
 - Reopen and export a 30-minute project without lost media, timing changes or broken audio sync.
-- Test cancellation, restart recovery, missing files, low disk space and GPU fallback.
+- ~~Job cancellation and live progress~~ (shipped). Still to test: restart recovery, missing files, low disk space and GPU fallback.
+- ~~Text-based editing, filler removal and caption downloads~~ (shipped). Next: word-level selection and speaker labels.
 - Make every proposed cut individually reviewable in the timeline.
 - Add visual regression and real browser playback/export coverage.
 

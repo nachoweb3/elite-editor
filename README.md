@@ -10,15 +10,26 @@ Elite Editor brings manual editing and local AI assistance into one workspace. S
 ## What you can do
 
 - **Edit on a real timeline:** media, video/audio tracks, text, trimming, splitting and keyframes through the adapted OpenCut editor.
-- **Animate zoom with diamonds:** save scale/position keyframes, move the playhead, focus a canvas zone and save the next frame. Native project animation, with editable curves and undo.
+- **Animate zoom with diamonds:** save scale/position keyframes, move the playhead, focus a canvas zone and save the next frame. Native project animation, with editable curves and undo. One-click slow push-in/pull-out, pans and a playhead punch-in.
 - **Style editable text:** 20 title, lower-third, tutorial, quote and manual-caption presets, with editable content and duration.
 - **Ask for an edit, then review it:** improve an instruction, inspect before/after settings and proposed cuts, and apply the exact reviewed plan. Expired or stale plans are rejected.
+- **Instructions work without a model:** a deterministic Spanish/English interpreter handles explicit cuts ("quita del 1:05 al 1:30", "remove the last 10 seconds") and common adjustments (contrast, exposure, black & white, zoom, music, captions, voice cleanup, beauty). With Ollama, explicit cuts still use the exact rules and an invalid model plan falls back to them instead of failing.
+- **Edit by text:** read the transcript, play any phrase from the original, cut or restore it, search it, and download SRT/VTT/plain-text captions of the current montage without rendering.
+- **Remove filler words and stutters** ("eh", "mmm", "que que", "vamos a vamos a") after previewing how many and how many seconds.
+- **Live progress and cancellation:** analysis, transcription and render report real percentages; Cancel stops the FFmpeg/Python process tree immediately.
+- **Engine status:** the assistant shows what works on this machine (FFmpeg, transcription, local AI, face tracking, NVENC) and how to fix the rest; `npm run doctor` prints the same checklist.
+- **Montage map and stats:** a strip of the original showing what is kept (click to listen), before/after duration, words per minute, speech share and longest pause.
+- **Word-level cuts and transcript fixes:** cut single words, correct a phrase inline, or find & replace across the transcript (optionally remembered for future transcriptions).
+- **Pacing:** shorten long pauses automatically while keeping natural breathing room.
+- **Export and publish:** approve the proposal, pick the output format (YouTube, Reels, TikTok, Shorts, 4K), render and download MP4/SRT/ASS, create a thumbnail from any frame, and get titles, description, hashtags and YouTube chapters ready to copy (local rules or local AI).
+- **Short-form captions:** choose 1–5 words per caption when bringing captions to the timeline.
+- **Xeno interface:** a custom glass-and-neon design language with HUD corners, auroras, a luminous playhead and energy buttons, built on system fonts (no downloads) and honouring reduced motion.
 - **Analyze locally:** silence detection with FFmpeg, optional Whisper transcription and optional Ollama-assisted editing.
 - **Bring proposed cuts into the timeline:** import editable cuts and captions. Applying an enhanced source preserves linked clip timing and layers.
 - **Improve the source:** optional local facial retouching, noise reduction and voice normalization. Keep the original and switch back.
 - **Control the finish manually:** video denoise/sharpen, voice-noise reduction, high-pass and loudness controls; 14 beauty controls including bidirectional feature sizing. These are classic local filters and bounded warps, not a claim of generative restoration or guaranteed wrinkle removal.
 - **Illustrate explanations:** review locally generated stickman concepts, remove unsuitable ones and render them as overlays or inserted segments.
-- **Use bundled creative tools:** 10 GPU effects including chroma key, six entrance/exit presets and 188 bundled CC0 audio files (100 interface sounds, 85 jingles and three ambient variants).
+- **Use bundled creative tools:** 10 GPU effects including chroma key, nine entrance/exit presets (entrance, exit or both, eased or linear, relative to the clip's own position) and 188 bundled CC0 audio files (100 interface sounds, 85 jingles and three ambient variants).
 - **Find audio faster:** category filters, duration sorting, author/collection search and browser-local favorites.
 - **Generate optional assets:** the Open Generative AI catalog adapter exposes selected image/video models through MuAPI. Local editing does not require a provider key.
 
@@ -63,7 +74,7 @@ npm run doctor
 
 `medium` is an explicit larger download: `node scripts/model.mjs medium`. The worker uses the installed model; it does not silently download weights. `ELITE_PYTHON` can point to another Python executable. An existing portable installation at `runtime/python/python.exe` is also supported.
 
-For prompt editing, install [Ollama](https://github.com/ollama/ollama), then explicitly pull `qwen3:4b-instruct-2507-q4_K_M`. Ollama is expected at `127.0.0.1:11434`. Facial retouching additionally requires the [MediaPipe Face Landmarker model](https://ai.google.dev/edge/mediapipe/solutions/vision/face_landmarker#models) saved as `models/face_landmarker.task`. These downloads are optional and have their own terms and hardware requirements.
+For model-assisted prompt editing, install [Ollama](https://github.com/ollama/ollama), then explicitly pull `qwen3:4b-instruct-2507-q4_K_M`. Ollama is expected at `127.0.0.1:11434`; override with `ELITE_OLLAMA_URL` and `ELITE_OLLAMA_MODEL`. Without Ollama, instructions use the local rule interpreter. `config/studio.json` accepts `"promptEngine": "auto" | "ollama" | "rules"` and `"fillers": ["o sea", ...]` for extra filler words. Without Python, renders still work and facial retouching is skipped with a notice. Facial retouching additionally requires the [MediaPipe Face Landmarker model](https://ai.google.dev/edge/mediapipe/solutions/vision/face_landmarker#models) saved as `models/face_landmarker.task`. These downloads are optional and have their own terms and hardware requirements.
 
 Auto-Editor is optional at `runtime/auto-editor.exe`; FFmpeg provides fallback silence cuts. The old Diffusion adapter is retained for source compatibility but its external application is not bundled or part of the supported setup.
 
@@ -96,6 +107,7 @@ The main UI proxies `/nacho-api` to the local backend. Timeline projects and med
 npm test
 npm run test:ui
 npm run test:integration
+npm run test:all
 cd vendor/opencut-classic/apps/web
 node scripts/build-content.mjs
 node ../../node_modules/typescript/bin/tsc --noEmit

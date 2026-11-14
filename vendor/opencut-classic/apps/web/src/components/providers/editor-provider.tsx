@@ -2,7 +2,6 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { Loader2 } from "lucide-react";
 import { EditorCore } from "@/core";
 import { useEditor } from "@/editor/use-editor";
 import { useKeybindingsListener } from "@/actions/use-keybindings";
@@ -99,23 +98,13 @@ export function EditorProvider({ projectId, children }: EditorProviderProps) {
 
 	if (isLoading) {
 		return (
-			<div className="bg-background flex h-screen w-screen items-center justify-center">
-				<div className="flex flex-col items-center gap-4">
-					<Loader2 className="text-muted-foreground size-8 animate-spin" />
-					<p className="text-muted-foreground text-sm">Loading project...</p>
-				</div>
-			</div>
+			<XenoLoader label="Abriendo proyecto" detail="Cargando timeline, medios y efectos" />
 		);
 	}
 
 	if (!activeProject) {
 		return (
-			<div className="bg-background flex h-screen w-screen items-center justify-center">
-				<div className="flex flex-col items-center gap-4">
-					<Loader2 className="text-muted-foreground size-8 animate-spin" />
-					<p className="text-muted-foreground text-sm">Exiting project...</p>
-				</div>
-			</div>
+			<XenoLoader label="Guardando y saliendo" detail="Tu trabajo queda en este equipo" />
 		);
 	}
 
@@ -124,6 +113,33 @@ export function EditorProvider({ projectId, children }: EditorProviderProps) {
 			<EditorRuntimeBindings />
 			{children}
 		</>
+	);
+}
+
+function XenoLoader({ label, detail }: { label: string; detail: string }) {
+	return (
+		<div
+			role="status"
+			className="xeno-shell flex h-screen w-screen items-center justify-center"
+		>
+			<div className="flex flex-col items-center gap-5 text-center">
+				<span
+					className="xeno-orbit"
+					data-busy="true"
+					style={{ width: 64, height: 64 }}
+					aria-hidden
+				/>
+				<div className="space-y-1">
+					<p className="xeno-holo-text text-lg font-semibold tracking-[0.2em] uppercase">
+						{label}
+					</p>
+					<p className="xeno-kicker">{detail}</p>
+				</div>
+				<div className="xeno-progress w-56" data-indeterminate="true" aria-hidden>
+					<span />
+				</div>
+			</div>
+		</div>
 	);
 }
 

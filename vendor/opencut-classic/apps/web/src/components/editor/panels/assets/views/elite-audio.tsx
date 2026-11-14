@@ -74,24 +74,34 @@ export function EliteAudio() {
 		setBusy(true);
 		setError("");
 		try {
-			const response = await fetch(sound.url.replace("/api/", "/nacho-api/"));
-			if (!response.ok) throw Error("No se pudo leer el audio");
-			const blob = await response.blob();
-			const files = await processMediaAssets({
-				files: [new File([blob], sound.name, { type: blob.type })],
-			});
-			if (
-				editor.project.getActive()?.metadata.id !== projectId ||
-				editor.scenes.getActiveScene().id !== sceneId
-			)
-				throw Error("Has cambiado de proyecto; vuelve a añadir el audio");
-			if (!files.length) throw Error("Formato de audio no compatible");
-			for (const prepared of files) {
-				const asset = await editor.media.addMediaAsset({
-					projectId,
-					asset: prepared,
+			// Reuse the copy already stored in this project instead of saving the file again.
+			const stored = editor.media
+				.getAssets()
+				.find((a) => a.name === sound.name && a.type === "audio");
+			const assets: NonNullable<typeof stored>[] = stored ? [stored] : [];
+			if (!stored) {
+				const response = await fetch(sound.url.replace("/api/", "/nacho-api/"));
+				if (!response.ok) throw Error("No se pudo leer el audio");
+				const blob = await response.blob();
+				const files = await processMediaAssets({
+					files: [new File([blob], sound.name, { type: blob.type })],
 				});
-				if (!asset) throw Error("No se pudo guardar el audio");
+				if (
+					editor.project.getActive()?.metadata.id !== projectId ||
+					editor.scenes.getActiveScene().id !== sceneId
+				)
+					throw Error("Has cambiado de proyecto; vuelve a añadir el audio");
+				if (!files.length) throw Error("Formato de audio no compatible");
+				for (const prepared of files) {
+					const added = await editor.media.addMediaAsset({
+						projectId,
+						asset: prepared,
+					});
+					if (!added) throw Error("No se pudo guardar el audio");
+					assets.push(added);
+				}
+			}
+			for (const asset of assets) {
 				const element = buildElementFromMedia({
 					mediaId: asset.id,
 					mediaType: "audio",

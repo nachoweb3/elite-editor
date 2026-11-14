@@ -14,7 +14,7 @@ interface RectangleParams {
 const RECTANGLE_PARAMS: ParamDefinition<keyof RectangleParams & string>[] = [
 	{
 		key: "fill",
-		label: "Fill",
+		label: "Relleno",
 		type: "color",
 		default: "#ffffff",
 	},
@@ -27,7 +27,7 @@ const RECTANGLE_PARAMS: ParamDefinition<keyof RectangleParams & string>[] = [
 	},
 	{
 		key: "strokeWidth",
-		label: "Width",
+		label: "Grosor",
 		type: "number",
 		default: 0,
 		min: 0,
@@ -39,7 +39,7 @@ const RECTANGLE_PARAMS: ParamDefinition<keyof RectangleParams & string>[] = [
 	STROKE_ALIGN_PARAM,
 	{
 		key: "cornerRadius",
-		label: "Corner radius",
+		label: "Redondeo de esquinas",
 		type: "number",
 		default: 0,
 		min: 0,
@@ -51,7 +51,7 @@ const RECTANGLE_PARAMS: ParamDefinition<keyof RectangleParams & string>[] = [
 
 export const rectangleGraphicDefinition: GraphicDefinition = {
 	id: "rectangle",
-	name: "Rectangle",
+	name: "Rectángulo",
 	keywords: ["rectangle", "square", "box"],
 	params: RECTANGLE_PARAMS,
 	render({ ctx, params, width, height }) {

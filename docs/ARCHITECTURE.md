@@ -16,6 +16,21 @@ Source enhancement processes the original recording, checks duration/dimensions,
 
 Prompt preview creates a cached plan bound to project, revision and instruction. The client supplies the reviewed plan ID when applying. Expired/mismatched plans fail; stale revisions and running jobs also block unsafe mutations.
 
+Plans come from two interpreters with the same output shape, validated by the same `applyPlan`:
+
+- `server/rule-planner.mjs` — deterministic Spanish/English rules. Cuts require explicit numbers (seconds, minutes, `mm:ss`, ranges, first/last N); settings move in bounded steps with intensity words ("un poco", "mucho") or explicit values ("zoom al 110%"). It reports clauses it did not understand.
+- `server/ollama.mjs` + the model prompt — used for nuanced requests.
+
+`promptEngine: "auto"` (default) uses the rules first when they fully understand an instruction that contains cuts (small models are unreliable with timestamps), the model otherwise, and the rules again when Ollama is unreachable or returns an invalid plan. The preview reports which engine produced it.
+
+Text-based editing (`server/transcript-tools.mjs`) works on word timestamps in source time: filler/stutter detection never uses estimated timings, pads cuts without crossing neighbouring words, and only proposes intervals still present in the edit. Restoring a phrase re-enables only the missing gap and is limited to single-source edits in source order. `/subtitles?format=srt|vtt|txt` builds captions of the current montage on the fly, resolving each clip against its own recording.
+
+Pacing, transcript correction, statistics and the publishing draft live in `server/insights.mjs` (pure functions). Corrections keep real word timings when the word count is unchanged and otherwise mark words as estimated, so they are never used to cut. `server/publish.mjs` asks the model only to reword the rule draft, with item counts enforced by the JSON schema, and validates every field; the result is cached per project revision. Rendering requires an explicit approval (`/approve`), which changes no cut or setting.
+
+The interface uses the Xeno design language (`apps/web/src/app/xeno.css`): dark tokens, glass panels with HUD corners, aurora background and energy buttons. It relies on system fonts (Bahnschrift, Cascadia, Segoe UI Variable) to stay offline, and disables motion under `prefers-reduced-motion`.
+
+Asset registry paths inside the checkout are stored relative (`resources/...`, `input/assets/...`) and older absolute entries are re-anchored, so the folder can be moved or cloned. The server creates its data folders at startup.
+
 ## Optional processing
 
 - FFmpeg: probing, silence detection, audio filters, source enhancement and backend render.
@@ -24,6 +39,10 @@ Prompt preview creates a cached plan bound to project, revision and instruction.
 - MuAPI: explicit optional image/video generation; uncertain submissions are not automatically resubmitted to avoid duplicate provider charges.
 
 The job queue is local/in-process with persisted status. It is not a durable distributed GPU queue. Restart recovery does not make the service multi-user safe.
+
+Each job runs inside an `AsyncLocalStorage` context carrying an `AbortSignal`; every `run()` call made by the job inherits it, so `POST /projects/:id/cancel` stops the whole FFmpeg/Python process tree (`taskkill /T` on Windows) and later steps refuse to start. Queued jobs are simply removed. Progress is derived from output the tools already print (fragment counters, Whisper timestamps, FFmpeg `time=`) and exposed per job as `{stage, fraction|null}`; unknown stages are indeterminate rather than guessed. `GET /capabilities` summarizes FFmpeg, transcription, Ollama, face model and NVENC availability with actionable hints, cached for a minute.
+
+Facial retouching is optional at render time: without the Python runtime or `models/face_landmarker.task` the original is used and the job reports it.
 
 ## Rust and WASM
 

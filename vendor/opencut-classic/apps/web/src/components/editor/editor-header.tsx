@@ -29,13 +29,26 @@ import {useAssetsPanelStore} from "./panels/assets/assets-panel-store";
 
 export function EditorHeader() {
 	return (
-		<header className="bg-background flex h-[3.4rem] items-center justify-between px-3 pt-0.5">
-			<div className="flex items-center gap-1">
+		<header className="xeno-header bg-background flex h-[3.4rem] items-center justify-between gap-3 px-3 pt-0.5">
+			<div className="flex min-w-0 items-center gap-1">
 				<ProjectDropdown />
 				<EditableProjectName />
 			</div>
+			<div className="pointer-events-none hidden items-center gap-3 lg:flex" aria-hidden>
+				<span className="xeno-wordmark">Elite · Editor</span>
+				<span className="xeno-status">
+					<span className="xeno-dot text-[#5effc8]" data-live="true" />
+					Local · sin nube
+				</span>
+			</div>
 			<nav className="flex items-center gap-2">
-                <Button variant="outline" onClick={()=>useAssetsPanelStore.getState().setActiveTab('assistant')}>Elite Editor · Asistente IA</Button>
+				<Button
+					variant="outline"
+					className="xeno-pill"
+					onClick={() => useAssetsPanelStore.getState().setActiveTab("assistant")}
+				>
+					Asistente IA
+				</Button>
 				<ExportButton />
 				<ThemeToggle />
 			</nav>

@@ -1,0 +1,663 @@
+/* ==========================================================================
+   XENO — visual language of Elite Editor
+   Bioluminescent signals on an indigo void: glass panels with HUD corners,
+   drifting auroras, energy borders and technical type. Fonts are system fonts
+   shipped with Windows (Bahnschrift, Cascadia), so nothing is downloaded.
+   Colour decoration is scoped to the dark theme; motion respects
+   prefers-reduced-motion.
+   ========================================================================== */
+
+:root {
+	--xeno-mint: #5effc8;
+	--xeno-cyan: #38e8ff;
+	--xeno-violet: #a78bfa;
+	--xeno-uv: #7c3aed;
+	--xeno-amber: #ffc46b;
+	--xeno-rose: #ff5c8a;
+	--xeno-void: #03040b;
+	--xeno-ink: #070a18;
+	--xeno-holo: linear-gradient(100deg, #5effc8, #38e8ff 32%, #a78bfa 66%, #5effc8);
+	--xeno-ease: cubic-bezier(0.2, 0.8, 0.2, 1);
+	--xeno-font-display: "Bahnschrift", "Segoe UI Variable Display", "DIN Alternate", "Barlow Semi Condensed", "Arial Narrow", system-ui, sans-serif;
+	--xeno-font-text: "Segoe UI Variable Text", "Segoe UI", "Inter", system-ui, -apple-system, sans-serif;
+	--xeno-font-mono: "Cascadia Code", "Cascadia Mono", "JetBrains Mono", "SF Mono", Consolas, monospace;
+	/* Tailwind reads these for font-sans / font-mono. */
+	--font-inter: var(--xeno-font-text);
+	--font-mono: var(--xeno-font-mono);
+}
+
+/* ------------------------------- Dark tokens ------------------------------ */
+
+.dark {
+	--background: hsl(234 52% 4%);
+	--foreground: hsl(205 45% 93%);
+	--card: hsl(233 44% 7%);
+	--card-foreground: hsl(205 45% 93%);
+	--popover: hsl(234 46% 7%);
+	--popover-hover: hsl(240 40% 14%);
+	--popover-foreground: hsl(205 50% 96%);
+	--primary: hsl(160 100% 68%);
+	--primary-foreground: hsl(234 60% 6%);
+	--secondary: hsl(160 100% 68% / 0.1);
+	--secondary-border: hsl(160 100% 68% / 0.35);
+	--secondary-foreground: hsl(160 100% 76%);
+	--muted: hsl(234 32% 15%);
+	--muted-foreground: hsl(228 22% 66%);
+	--accent: hsl(255 80% 70% / 0.12);
+	--accent-foreground: hsl(205 55% 97%);
+	--destructive: hsl(345 100% 66%);
+	--constructive: hsl(160 100% 60%);
+	--caution: hsl(38 100% 70%);
+	--border: hsl(238 60% 80% / 0.11);
+	--input: hsl(234 44% 9%);
+	--ring: hsl(160 100% 68%);
+	--sidebar-background: hsl(234 46% 6%);
+	--sidebar: hsl(234 46% 6%);
+	color-scheme: dark;
+}
+.dark .panel {
+	--background: hsl(234 44% 7%);
+	--foreground: hsl(205 42% 91%);
+	--card: hsl(234 44% 8%);
+	--muted: hsl(234 30% 17%);
+	--accent: hsl(255 80% 70% / 0.12);
+	--border: hsl(238 60% 80% / 0.1);
+	--input: hsl(234 40% 11%);
+}
+
+/* ------------------------------ Base & void ------------------------------- */
+
+.xeno {
+	font-feature-settings: "ss01", "cv11";
+	letter-spacing: 0.005em;
+}
+.xeno ::selection {
+	background: rgb(94 255 200 / 0.35);
+	color: #fff;
+}
+.dark body.xeno {
+	background:
+		radial-gradient(1200px 700px at 12% -10%, rgb(124 58 237 / 0.22), transparent 60%),
+		radial-gradient(900px 600px at 100% 110%, rgb(56 232 255 / 0.12), transparent 60%),
+		var(--xeno-void);
+}
+/* Aurora: two soft light fields drifting slowly behind every surface. */
+.dark body.xeno::before {
+	content: "";
+	position: fixed;
+	inset: -25%;
+	z-index: -1;
+	pointer-events: none;
+	background:
+		radial-gradient(38% 30% at 30% 40%, rgb(94 255 200 / 0.09), transparent 70%),
+		radial-gradient(34% 28% at 70% 60%, rgb(167 139 250 / 0.11), transparent 70%),
+		radial-gradient(26% 22% at 55% 20%, rgb(56 232 255 / 0.07), transparent 70%);
+	animation: xeno-drift 46s ease-in-out infinite alternate;
+	will-change: transform;
+}
+/* Perspective grid and film grain, barely there. */
+.dark body.xeno::after {
+	content: "";
+	position: fixed;
+	inset: 0;
+	z-index: -1;
+	pointer-events: none;
+	opacity: 0.55;
+	background:
+		linear-gradient(rgb(140 150 255 / 0.035) 1px, transparent 1px) 0 0 / 46px 46px,
+		linear-gradient(90deg, rgb(140 150 255 / 0.035) 1px, transparent 1px) 0 0 / 46px 46px,
+		url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='160' height='160'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='2' stitchTiles='stitch'/><feColorMatrix values='0 0 0 0 1 0 0 0 0 1 0 0 0 0 1 0 0 0 .05 0'/></filter><rect width='100%' height='100%' filter='url(%23n)'/></svg>");
+	mask-image: radial-gradient(ellipse at center, #000 30%, transparent 85%);
+}
+.dark .xeno-shell {
+	background: transparent;
+}
+
+/* --------------------------------- Panels --------------------------------- */
+
+.dark .xeno .panel {
+	position: relative;
+	border-radius: 14px;
+	border-color: rgb(150 160 255 / 0.13);
+	background:
+		linear-gradient(180deg, rgb(16 19 44 / 0.82), rgb(7 9 24 / 0.86));
+	backdrop-filter: blur(16px) saturate(140%);
+	box-shadow:
+		inset 0 1px 0 rgb(255 255 255 / 0.05),
+		inset 0 0 40px rgb(124 58 237 / 0.05),
+		0 24px 60px -36px rgb(0 0 0 / 0.95);
+}
+/* HUD corner brackets. */
+.dark .xeno .panel::before {
+	content: "";
+	position: absolute;
+	inset: 2px;
+	z-index: 30;
+	pointer-events: none;
+	opacity: 0.8;
+	background:
+		linear-gradient(var(--xeno-mint), var(--xeno-mint)) top left / 10px 1.5px,
+		linear-gradient(var(--xeno-mint), var(--xeno-mint)) top left / 1.5px 10px,
+		linear-gradient(var(--xeno-violet), var(--xeno-violet)) bottom right / 10px 1.5px,
+		linear-gradient(var(--xeno-violet), var(--xeno-violet)) bottom right / 1.5px 10px;
+	background-repeat: no-repeat;
+}
+/* Energy seam travelling along the top edge. */
+.dark .xeno .panel::after {
+	content: "";
+	position: absolute;
+	top: 0;
+	left: 10%;
+	right: 10%;
+	height: 1px;
+	z-index: 30;
+	pointer-events: none;
+	background: linear-gradient(90deg, transparent, var(--xeno-mint), var(--xeno-cyan), var(--xeno-violet), transparent);
+	background-size: 200% 100%;
+	opacity: 0.6;
+	animation: xeno-sweep 7s linear infinite;
+}
+
+/* -------------------------------- Header ---------------------------------- */
+
+.dark .xeno-header {
+	position: relative;
+	background: linear-gradient(180deg, rgb(10 12 30 / 0.7), transparent);
+}
+.dark .xeno-header::after {
+	content: "";
+	position: absolute;
+	left: 0;
+	right: 0;
+	bottom: 0;
+	height: 1px;
+	background: linear-gradient(90deg, transparent 2%, rgb(94 255 200 / 0.45), rgb(167 139 250 / 0.45), transparent 98%);
+}
+.xeno-wordmark {
+	font-family: var(--xeno-font-display);
+	font-weight: 600;
+	font-size: 0.72rem;
+	letter-spacing: 0.32em;
+	text-transform: uppercase;
+	background: var(--xeno-holo);
+	background-size: 220% 100%;
+	-webkit-background-clip: text;
+	background-clip: text;
+	color: transparent;
+	animation: xeno-holo 9s linear infinite;
+}
+.xeno-status {
+	display: inline-flex;
+	align-items: center;
+	gap: 0.4rem;
+	font-family: var(--xeno-font-mono);
+	font-size: 0.62rem;
+	letter-spacing: 0.12em;
+	text-transform: uppercase;
+	color: rgb(205 220 255 / 0.55);
+}
+
+/* -------------------------------- Buttons --------------------------------- */
+
+.dark .xeno-primary {
+	color: #031015;
+	background-color: transparent;
+	background-image: var(--xeno-holo);
+	background-size: 220% 100%;
+	font-weight: 600;
+	box-shadow: 0 0 0 1px rgb(94 255 200 / 0.5), 0 6px 22px -8px rgb(94 255 200 / 0.7);
+	transition: background-position 0.6s var(--xeno-ease), box-shadow 0.3s var(--xeno-ease), transform 0.2s var(--xeno-ease);
+}
+.dark .xeno-primary:hover {
+	background-color: transparent;
+	background-position: 100% 0;
+	box-shadow: 0 0 0 1px rgb(94 255 200 / 0.8), 0 10px 32px -8px rgb(56 232 255 / 0.85);
+	transform: translateY(-1px);
+}
+.dark .xeno-primary:active {
+	transform: translateY(0) scale(0.98);
+}
+.dark .xeno-outline {
+	background: rgb(255 255 255 / 0.025);
+	border-color: rgb(167 139 250 / 0.28);
+	backdrop-filter: blur(6px);
+	transition: border-color 0.25s, box-shadow 0.25s, background 0.25s, transform 0.2s;
+}
+.dark .xeno-outline:hover {
+	background: rgb(94 255 200 / 0.07);
+	border-color: rgb(94 255 200 / 0.6);
+	box-shadow: 0 0 18px -4px rgb(94 255 200 / 0.55), inset 0 0 12px rgb(94 255 200 / 0.08);
+	color: #eafff8;
+}
+.dark .xeno-secondary {
+	background: rgb(94 255 200 / 0.1);
+	border-color: rgb(94 255 200 / 0.45);
+	color: var(--xeno-mint);
+	box-shadow: 0 0 16px -4px rgb(94 255 200 / 0.6), inset 0 0 10px rgb(94 255 200 / 0.12);
+}
+.dark .xeno-ghost:hover {
+	background: rgb(167 139 250 / 0.1);
+	color: #f2ecff;
+}
+
+/* Export: a holographic core with an energy ring orbiting its border. */
+.xeno-export {
+	position: relative;
+	isolation: isolate;
+	display: inline-flex;
+	align-items: center;
+	gap: 0.45rem;
+	padding: 0.42rem 1.05rem;
+	border-radius: 999px;
+	font-family: var(--xeno-font-display);
+	font-weight: 600;
+	font-size: 0.8rem;
+	letter-spacing: 0.14em;
+	text-transform: uppercase;
+	color: #031015;
+	background: var(--xeno-holo);
+	background-size: 220% 100%;
+	animation: xeno-holo 6s linear infinite;
+	box-shadow: 0 0 24px -6px rgb(94 255 200 / 0.8);
+	overflow: hidden;
+}
+.xeno-export::before {
+	content: "";
+	position: absolute;
+	inset: -150%;
+	z-index: -1;
+	background: conic-gradient(from 0deg, transparent 0 70%, rgb(255 255 255 / 0.9) 80%, transparent 90%);
+	animation: xeno-spin 3.2s linear infinite;
+	mix-blend-mode: overlay;
+}
+.xeno-export:hover {
+	box-shadow: 0 0 34px -4px rgb(56 232 255 / 0.95);
+}
+
+.dark .xeno-pill {
+	border-radius: 999px;
+	font-family: var(--xeno-font-display);
+	letter-spacing: 0.08em;
+	border-color: rgb(167 139 250 / 0.35);
+	background: linear-gradient(90deg, rgb(124 58 237 / 0.18), rgb(56 232 255 / 0.08));
+}
+.dark .xeno-pill:hover {
+	border-color: rgb(94 255 200 / 0.7);
+	box-shadow: 0 0 22px -6px rgb(167 139 250 / 0.9);
+}
+
+/* ---------------------------------- Tabs ---------------------------------- */
+
+.xeno-tab {
+	position: relative;
+	transition: color 0.2s, transform 0.2s var(--xeno-ease), background 0.2s;
+}
+.xeno-tab:hover {
+	transform: translateX(1px);
+}
+.dark .xeno-tab[data-active="true"] {
+	color: var(--xeno-mint);
+	background: radial-gradient(circle at 50% 50%, rgb(94 255 200 / 0.22), rgb(94 255 200 / 0.04) 70%);
+	box-shadow: inset 0 0 0 1px rgb(94 255 200 / 0.45), 0 0 16px -2px rgb(94 255 200 / 0.6);
+}
+.dark .xeno-tab[data-active="true"]::before {
+	content: "";
+	position: absolute;
+	left: -5px;
+	top: 22%;
+	bottom: 22%;
+	width: 2px;
+	border-radius: 2px;
+	background: var(--xeno-mint);
+	box-shadow: 0 0 10px var(--xeno-mint);
+}
+
+/* --------------------------------- Fields --------------------------------- */
+
+.dark .xeno input:not([type="range"]):not([type="checkbox"]):not([type="radio"]):not([type="color"]):not([type="file"]),
+.dark .xeno select,
+.dark .xeno textarea {
+	background-color: rgb(8 10 26 / 0.75);
+	border-color: rgb(150 160 255 / 0.16);
+	transition: border-color 0.2s, box-shadow 0.2s;
+}
+.dark .xeno input:not([type="range"]):not([type="checkbox"]):focus-visible,
+.dark .xeno select:focus-visible,
+.dark .xeno textarea:focus-visible {
+	border-color: rgb(94 255 200 / 0.7);
+	box-shadow: 0 0 0 3px rgb(94 255 200 / 0.14), 0 0 18px -6px rgb(94 255 200 / 0.8);
+	outline: none;
+}
+.xeno input[type="checkbox"],
+.xeno input[type="radio"] {
+	accent-color: var(--xeno-mint);
+}
+.xeno input[type="range"] {
+	-webkit-appearance: none;
+	appearance: none;
+	height: 18px;
+	background: transparent;
+	cursor: pointer;
+}
+.xeno input[type="range"]::-webkit-slider-runnable-track {
+	height: 3px;
+	border-radius: 99px;
+	background: linear-gradient(90deg, rgb(94 255 200 / 0.75), rgb(167 139 250 / 0.75));
+}
+.xeno input[type="range"]::-moz-range-track {
+	height: 3px;
+	border-radius: 99px;
+	background: linear-gradient(90deg, rgb(94 255 200 / 0.75), rgb(167 139 250 / 0.75));
+}
+.xeno input[type="range"]::-webkit-slider-thumb {
+	-webkit-appearance: none;
+	width: 14px;
+	height: 14px;
+	margin-top: -5.5px;
+	border-radius: 50%;
+	background: radial-gradient(circle, #ffffff 0 30%, #c9fff0 31% 100%);
+	box-shadow: 0 0 0 3px rgb(94 255 200 / 0.22), 0 0 14px rgb(94 255 200 / 0.9);
+	transition: transform 0.15s;
+}
+.xeno input[type="range"]::-moz-range-thumb {
+	width: 14px;
+	height: 14px;
+	border: 0;
+	border-radius: 50%;
+	background: #d9fff4;
+	box-shadow: 0 0 0 3px rgb(94 255 200 / 0.22), 0 0 14px rgb(94 255 200 / 0.9);
+}
+.xeno input[type="range"]:active::-webkit-slider-thumb {
+	transform: scale(1.25);
+}
+.xeno input[type="range"]:disabled {
+	opacity: 0.4;
+	cursor: not-allowed;
+}
+
+/* ------------------------------- Scrollbars ------------------------------- */
+
+.dark .xeno * {
+	scrollbar-width: thin;
+	scrollbar-color: rgb(167 139 250 / 0.35) transparent;
+}
+.dark .xeno ::-webkit-scrollbar {
+	width: 7px;
+	height: 7px;
+}
+.dark .xeno ::-webkit-scrollbar-thumb {
+	border-radius: 99px;
+	background: linear-gradient(180deg, rgb(94 255 200 / 0.4), rgb(167 139 250 / 0.4));
+}
+.dark .xeno ::-webkit-scrollbar-track {
+	background: transparent;
+}
+
+/* --------------------------- Overlays & dialogs --------------------------- */
+
+.dark .xeno [role="dialog"],
+.dark .xeno [role="menu"],
+.dark .xeno [role="listbox"],
+.dark .xeno [data-radix-popper-content-wrapper] > div {
+	border-color: rgb(150 160 255 / 0.18);
+	box-shadow: 0 30px 80px -30px rgb(0 0 0 / 0.95), 0 0 0 1px rgb(94 255 200 / 0.06), 0 0 40px -18px rgb(124 58 237 / 0.7);
+}
+.dark .xeno [role="dialog"] {
+	background: linear-gradient(160deg, rgb(18 21 50 / 0.96), rgb(6 8 22 / 0.97));
+	backdrop-filter: blur(20px);
+}
+
+/* Resize handles glow when you reach for them. */
+.dark .xeno [data-panel-resize-handle-id]::after {
+	transition: background 0.2s, box-shadow 0.2s;
+}
+.dark .xeno [data-panel-resize-handle-id]:hover::after,
+.dark .xeno [data-panel-resize-handle-id][data-resize-handle-state="drag"]::after {
+	background: linear-gradient(var(--xeno-mint), var(--xeno-violet));
+	box-shadow: 0 0 12px var(--xeno-mint);
+}
+
+/* ------------------------------ Assistant kit ----------------------------- */
+
+.xeno-card {
+	position: relative;
+	border-radius: 14px;
+	border: 1px solid transparent;
+	background:
+		linear-gradient(170deg, rgb(20 24 56 / 0.72), rgb(8 10 26 / 0.8)) padding-box,
+		linear-gradient(135deg, rgb(94 255 200 / 0.4), rgb(150 160 255 / 0.08) 38%, rgb(150 160 255 / 0.06) 62%, rgb(167 139 250 / 0.45)) border-box;
+	box-shadow: 0 18px 40px -30px rgb(0 0 0 / 0.9);
+	transition: box-shadow 0.35s var(--xeno-ease), transform 0.35s var(--xeno-ease);
+	animation: xeno-rise 0.55s var(--xeno-ease) both;
+	animation-delay: calc(var(--i, 0) * 60ms);
+}
+.xeno-card:hover {
+	box-shadow: 0 18px 40px -30px rgb(0 0 0 / 0.9), 0 0 28px -14px rgb(94 255 200 / 0.55);
+}
+:root:not(.dark) .xeno-card {
+	background: linear-gradient(170deg, #ffffff, #f4f6ff) padding-box, linear-gradient(135deg, #5effc8, #e4e7ff 40%, #a78bfa) border-box;
+}
+.xeno-heading {
+	display: flex;
+	align-items: center;
+	gap: 0.55rem;
+	font-family: var(--xeno-font-display);
+	font-weight: 600;
+	font-size: 0.74rem;
+	letter-spacing: 0.18em;
+	text-transform: uppercase;
+	color: rgb(226 236 255 / 0.95);
+}
+.xeno-heading[data-index]::before {
+	content: attr(data-index);
+	display: inline-grid;
+	place-items: center;
+	min-width: 1.45rem;
+	height: 1.45rem;
+	border-radius: 7px;
+	font-family: var(--xeno-font-mono);
+	font-size: 0.62rem;
+	letter-spacing: 0;
+	color: #04110d;
+	background: var(--xeno-holo);
+	background-size: 220% 100%;
+	box-shadow: 0 0 14px -2px rgb(94 255 200 / 0.75);
+}
+.xeno-holo-text {
+	background: var(--xeno-holo);
+	background-size: 220% 100%;
+	-webkit-background-clip: text;
+	background-clip: text;
+	color: transparent;
+	animation: xeno-holo 10s linear infinite;
+}
+.xeno-kicker {
+	font-family: var(--xeno-font-mono);
+	font-size: 0.6rem;
+	letter-spacing: 0.22em;
+	text-transform: uppercase;
+	color: rgb(94 255 200 / 0.75);
+}
+.xeno-mono {
+	font-family: var(--xeno-font-mono);
+	font-variant-numeric: tabular-nums;
+}
+/* Rotating orbit glyph: the assistant's "presence". */
+.xeno-orbit {
+	position: relative;
+	width: 34px;
+	height: 34px;
+	flex: none;
+	border-radius: 50%;
+	background: radial-gradient(circle, #eafff8 0 14%, rgb(94 255 200 / 0.55) 15% 26%, transparent 27%);
+	box-shadow: 0 0 22px -4px rgb(94 255 200 / 0.8);
+}
+.xeno-orbit::before,
+.xeno-orbit::after {
+	content: "";
+	position: absolute;
+	inset: 0;
+	border-radius: 50%;
+	border: 1px solid rgb(94 255 200 / 0.55);
+	border-left-color: transparent;
+	border-bottom-color: transparent;
+	animation: xeno-spin 2.8s linear infinite;
+}
+.xeno-orbit::after {
+	inset: 5px;
+	border-color: rgb(167 139 250 / 0.8);
+	border-right-color: transparent;
+	border-top-color: transparent;
+	animation-duration: 1.9s;
+	animation-direction: reverse;
+}
+.xeno-orbit[data-busy="true"]::before {
+	animation-duration: 0.9s;
+}
+.xeno-orbit[data-busy="true"]::after {
+	animation-duration: 0.6s;
+}
+.xeno-dot {
+	width: 7px;
+	height: 7px;
+	border-radius: 50%;
+	display: inline-block;
+	background: currentColor;
+	box-shadow: 0 0 10px currentColor;
+}
+.xeno-dot[data-live="true"] {
+	animation: xeno-pulse 1.6s ease-in-out infinite;
+}
+.xeno-progress {
+	position: relative;
+	height: 6px;
+	border-radius: 99px;
+	overflow: hidden;
+	background: rgb(150 160 255 / 0.12);
+	box-shadow: inset 0 0 0 1px rgb(150 160 255 / 0.12);
+}
+.xeno-progress > span {
+	position: absolute;
+	inset: 0 auto 0 0;
+	border-radius: 99px;
+	background: var(--xeno-holo);
+	background-size: 200% 100%;
+	box-shadow: 0 0 14px rgb(94 255 200 / 0.8);
+	animation: xeno-holo 2.4s linear infinite;
+	transition: width 0.5s var(--xeno-ease);
+}
+.xeno-progress > span::after {
+	content: "";
+	position: absolute;
+	inset: 0;
+	background: linear-gradient(90deg, transparent, rgb(255 255 255 / 0.7), transparent);
+	background-size: 40% 100%;
+	background-repeat: no-repeat;
+	animation: xeno-shimmer 1.4s ease-in-out infinite;
+}
+.xeno-progress[data-indeterminate="true"] > span {
+	width: 35%;
+	animation: xeno-holo 2.4s linear infinite, xeno-scan 1.6s var(--xeno-ease) infinite;
+}
+.xeno-map {
+	filter: drop-shadow(0 0 6px rgb(94 255 200 / 0.35));
+}
+.xeno-chip {
+	border-radius: 999px;
+	border: 1px solid rgb(150 160 255 / 0.2);
+	background: rgb(255 255 255 / 0.03);
+	font-family: var(--xeno-font-mono);
+	font-size: 0.62rem;
+	letter-spacing: 0.04em;
+	transition: border-color 0.2s, box-shadow 0.2s, color 0.2s;
+}
+button.xeno-chip:hover {
+	border-color: rgb(94 255 200 / 0.6);
+	color: var(--xeno-mint);
+	box-shadow: 0 0 14px -4px rgb(94 255 200 / 0.8);
+}
+/* Never sets position: dialogs using it must stay `fixed`; static hosts add `relative`. */
+.xeno-scanlines::after {
+	content: "";
+	position: absolute;
+	inset: 0;
+	pointer-events: none;
+	background: repeating-linear-gradient(180deg, rgb(255 255 255 / 0.025) 0 1px, transparent 1px 3px);
+	mix-blend-mode: overlay;
+}
+
+/* ------------------------------ Project tiles ----------------------------- */
+
+.dark .xeno-tile {
+	border-radius: 16px;
+	transition: transform 0.4s var(--xeno-ease), box-shadow 0.4s var(--xeno-ease), border-color 0.3s;
+}
+.dark .xeno-tile:hover {
+	transform: translateY(-4px) rotateX(2deg);
+	box-shadow: 0 30px 60px -30px rgb(0 0 0 / 0.95), 0 0 34px -12px rgb(94 255 200 / 0.6);
+}
+
+/* ------------------------- Playhead & viewport ---------------------------- */
+
+.dark .xeno-playhead {
+	background: linear-gradient(180deg, var(--xeno-mint), var(--xeno-cyan) 60%, transparent);
+	box-shadow: 0 0 10px rgb(94 255 200 / 0.9), 0 0 24px rgb(56 232 255 / 0.45);
+}
+.dark .xeno-playhead-knob {
+	background: radial-gradient(circle, #fff 0 30%, var(--xeno-mint) 32%);
+	box-shadow: 0 0 0 3px rgb(94 255 200 / 0.25), 0 0 16px rgb(94 255 200 / 0.95);
+}
+/* The program monitor sits in a holographic frame. */
+.dark .xeno-viewport {
+	border-color: rgb(94 255 200 / 0.28);
+	box-shadow:
+		0 0 0 1px rgb(167 139 250 / 0.12),
+		0 0 30px -6px rgb(94 255 200 / 0.35),
+		0 0 90px -30px rgb(124 58 237 / 0.7);
+}
+
+/* -------------------------------- Keyframes ------------------------------- */
+
+@keyframes xeno-drift {
+	0% { transform: translate3d(-4%, -2%, 0) rotate(0deg) scale(1); }
+	50% { transform: translate3d(3%, 2%, 0) rotate(8deg) scale(1.08); }
+	100% { transform: translate3d(-2%, 4%, 0) rotate(-6deg) scale(1.02); }
+}
+@keyframes xeno-sweep {
+	from { background-position: 200% 0; }
+	to { background-position: -200% 0; }
+}
+@keyframes xeno-holo {
+	from { background-position: 0% 0; }
+	to { background-position: 220% 0; }
+}
+@keyframes xeno-spin {
+	to { transform: rotate(360deg); }
+}
+@keyframes xeno-pulse {
+	0%, 100% { opacity: 1; transform: scale(1); }
+	50% { opacity: 0.45; transform: scale(0.8); }
+}
+@keyframes xeno-shimmer {
+	from { background-position: -60% 0; }
+	to { background-position: 160% 0; }
+}
+@keyframes xeno-scan {
+	0% { transform: translateX(-110%); }
+	100% { transform: translateX(310%); }
+}
+@keyframes xeno-rise {
+	from { opacity: 0; transform: translateY(8px) scale(0.99); filter: blur(3px); }
+	to { opacity: 1; transform: none; filter: none; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+	.xeno *,
+	.xeno *::before,
+	.xeno *::after,
+	.xeno::before,
+	.xeno::after {
+		animation: none !important;
+		transition: none !important;
+	}
+}

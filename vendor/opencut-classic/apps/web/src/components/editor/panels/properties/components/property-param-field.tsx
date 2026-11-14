@@ -50,7 +50,7 @@ export function PropertyParamField({
 					<KeyframeToggle
 						isActive={keyframe.isActive}
 						isDisabled={keyframe.isDisabled}
-						title={`Toggle ${param.label.toLowerCase()} keyframe`}
+						title={`Fotograma clave de ${param.label.toLowerCase()}`}
 						onToggle={keyframe.onToggle}
 					/>
 				) : undefined

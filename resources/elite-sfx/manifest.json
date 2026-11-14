@@ -1,0 +1,264 @@
+{
+  "license": "CC0-1.0",
+  "author": "Elite Editor (sintetizado con FFmpeg)",
+  "sounds": [
+    {
+      "file": "boom-grave.ogg",
+      "title": "Boom grave",
+      "category": "Impactos",
+      "seconds": 2.2
+    },
+    {
+      "file": "boom-cine.ogg",
+      "title": "Boom cinemático",
+      "category": "Impactos",
+      "seconds": 3.2
+    },
+    {
+      "file": "golpe-seco.ogg",
+      "title": "Golpe seco",
+      "category": "Impactos",
+      "seconds": 0.6
+    },
+    {
+      "file": "dun-dun-dun.ogg",
+      "title": "Dun dun duuun",
+      "category": "Impactos",
+      "seconds": 2.6
+    },
+    {
+      "file": "revelacion.ogg",
+      "title": "Revelación",
+      "category": "Impactos",
+      "seconds": 2.4
+    },
+    {
+      "file": "whoosh-corto.ogg",
+      "title": "Whoosh corto",
+      "category": "Transiciones",
+      "seconds": 0.45
+    },
+    {
+      "file": "whoosh.ogg",
+      "title": "Whoosh",
+      "category": "Transiciones",
+      "seconds": 0.8
+    },
+    {
+      "file": "whoosh-largo.ogg",
+      "title": "Whoosh largo",
+      "category": "Transiciones",
+      "seconds": 1.4
+    },
+    {
+      "file": "swoosh-agudo.ogg",
+      "title": "Swoosh agudo",
+      "category": "Transiciones",
+      "seconds": 0.5
+    },
+    {
+      "file": "riser.ogg",
+      "title": "Subida de tensión",
+      "category": "Transiciones",
+      "seconds": 3
+    },
+    {
+      "file": "downlifter.ogg",
+      "title": "Bajada",
+      "category": "Transiciones",
+      "seconds": 2
+    },
+    {
+      "file": "platillo-inverso.ogg",
+      "title": "Platillo inverso",
+      "category": "Transiciones",
+      "seconds": 1.6
+    },
+    {
+      "file": "zoom-rapido.ogg",
+      "title": "Zoom rápido",
+      "category": "Transiciones",
+      "seconds": 0.6
+    },
+    {
+      "file": "transicion-glitch.ogg",
+      "title": "Transición glitch",
+      "category": "Transiciones",
+      "seconds": 0.7
+    },
+    {
+      "file": "fallo-epico.ogg",
+      "title": "Fallo épico",
+      "category": "Memes",
+      "seconds": 2.6
+    },
+    {
+      "file": "chiste-malo.ogg",
+      "title": "Chiste malo (ba dum tss)",
+      "category": "Memes",
+      "seconds": 1.4
+    },
+    {
+      "file": "boing.ogg",
+      "title": "Boing",
+      "category": "Memes",
+      "seconds": 1.2
+    },
+    {
+      "file": "silbato-sube.ogg",
+      "title": "Silbato que sube",
+      "category": "Memes",
+      "seconds": 1
+    },
+    {
+      "file": "silbato-baja.ogg",
+      "title": "Silbato que baja",
+      "category": "Memes",
+      "seconds": 1
+    },
+    {
+      "file": "grillos.ogg",
+      "title": "Silencio incómodo (grillos)",
+      "category": "Memes",
+      "seconds": 3
+    },
+    {
+      "file": "parón-disco.ogg",
+      "title": "Parón de disco",
+      "category": "Memes",
+      "seconds": 0.9
+    },
+    {
+      "file": "bocina.ogg",
+      "title": "Bocina de payaso",
+      "category": "Memes",
+      "seconds": 0.7
+    },
+    {
+      "file": "tension-drama.ogg",
+      "title": "Tensión dramática",
+      "category": "Memes",
+      "seconds": 4
+    },
+    {
+      "file": "sirena.ogg",
+      "title": "Sirena de alerta",
+      "category": "Memes",
+      "seconds": 2
+    },
+    {
+      "file": "laser.ogg",
+      "title": "Láser",
+      "category": "Memes",
+      "seconds": 0.35
+    },
+    {
+      "file": "ding.ogg",
+      "title": "Ding",
+      "category": "Interfaz",
+      "seconds": 1.6
+    },
+    {
+      "file": "ding-doble.ogg",
+      "title": "Ding doble",
+      "category": "Interfaz",
+      "seconds": 1.6
+    },
+    {
+      "file": "pop.ogg",
+      "title": "Pop",
+      "category": "Interfaz",
+      "seconds": 0.25
+    },
+    {
+      "file": "burbuja.ogg",
+      "title": "Burbuja",
+      "category": "Interfaz",
+      "seconds": 0.3
+    },
+    {
+      "file": "clic.ogg",
+      "title": "Clic",
+      "category": "Interfaz",
+      "seconds": 0.08
+    },
+    {
+      "file": "notificacion.ogg",
+      "title": "Notificación",
+      "category": "Interfaz",
+      "seconds": 0.9
+    },
+    {
+      "file": "correcto.ogg",
+      "title": "Respuesta correcta",
+      "category": "Interfaz",
+      "seconds": 0.9
+    },
+    {
+      "file": "incorrecto.ogg",
+      "title": "Respuesta incorrecta",
+      "category": "Interfaz",
+      "seconds": 0.7
+    },
+    {
+      "file": "teclado.ogg",
+      "title": "Teclado",
+      "category": "Interfaz",
+      "seconds": 1.5
+    },
+    {
+      "file": "obturador.ogg",
+      "title": "Disparo de cámara",
+      "category": "Interfaz",
+      "seconds": 0.3
+    },
+    {
+      "file": "moneda.ogg",
+      "title": "Moneda",
+      "category": "Juego",
+      "seconds": 0.6
+    },
+    {
+      "file": "subir-nivel.ogg",
+      "title": "Subir de nivel",
+      "category": "Juego",
+      "seconds": 0.9
+    },
+    {
+      "file": "game-over.ogg",
+      "title": "Game over",
+      "category": "Juego",
+      "seconds": 1.6
+    },
+    {
+      "file": "power-up.ogg",
+      "title": "Power-up",
+      "category": "Juego",
+      "seconds": 0.8
+    },
+    {
+      "file": "tic-tac.ogg",
+      "title": "Tic tac",
+      "category": "Tiempo",
+      "seconds": 2
+    },
+    {
+      "file": "latido.ogg",
+      "title": "Latido",
+      "category": "Tiempo",
+      "seconds": 2
+    },
+    {
+      "file": "redoble.ogg",
+      "title": "Redoble",
+      "category": "Tiempo",
+      "seconds": 2.4
+    },
+    {
+      "file": "cuenta-atras.ogg",
+      "title": "Cuenta atrás",
+      "category": "Tiempo",
+      "seconds": 3.4
+    }
+  ]
+}

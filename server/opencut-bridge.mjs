@@ -1,7 +1,8 @@
 import {remapWords,cues} from './subtitles.mjs';
 
 // Transport manifest in seconds; the editor converts to its native MediaTime.
-export function opencutManifest(p){
+// wordsPerCaption: 1–5 words per on-screen caption (short-form videos read better with fewer).
+export function opencutManifest(p,{wordsPerCaption=5}={}){
   if(p.blank||!p.source)throw Error('Selecciona una grabación original');
   if(p.clips.some(c=>c.enabled&&c.sourceId&&c.sourceId!==p.id))throw Error('El montaje contiene otras fuentes; importa sus medios por separado');
   let at=0;
@@ -11,7 +12,7 @@ export function opencutManifest(p){
   });
   if(!clips.length)throw Error('No hay cortes activos');
   return {version:1,projectId:p.id,revision:p.revision,name:p.name,sourceUrl:`/nacho-api/projects/${p.id}/media`,sourceDuration:p.media.duration,duration:at,clips,
-    captions:p.settings.subtitles?cues(remapWords(p.transcript||[],p.clips)).map(g=>({start:g[0].start,end:g.at(-1).end,text:g.map(w=>w.word.trim()).join(' ')})):[],
+    captions:p.settings.subtitles?cues(remapWords(p.transcript||[],p.clips),wordsPerCaption).map(g=>({start:g[0].start,end:g.at(-1).end,text:g.map(w=>w.word.trim()).join(' ')})):[],
     limitations:['Se transfieren cortes y subtítulos. Para retoque y voz limpia, prepara y aplica el original mejorado. Las transiciones y la decoración del motor no se transfieren como capas.',
       ...(p.clips.some(c=>c.enabled&&c.motion&&c.motion!=='none')?['Los movimientos de cámara del motor no se transfieren; revísalos en el vídeo procesado.']:[]),
       ...(p.stickmen?.enabled&&p.stickmen.items?.length?['Las explicaciones stickman solo están en el vídeo procesado. Esta importación conserva los cortes originales, sin las inserciones ni su duración adicional.']:[])]};

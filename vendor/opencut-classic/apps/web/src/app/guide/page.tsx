@@ -18,11 +18,16 @@ const steps = [
 	],
 	[
 		"04",
+		"Limpia por texto",
+		"En Editar por texto escucha cada frase, quítala o recupérala. Buscar muletillas encuentra «eh», «mmm» y repeticiones como «vamos a vamos a» y las quita de una vez. Descarga los subtítulos en SRT o VTT sin renderizar. Todo se puede deshacer.",
+	],
+	[
+		"05",
 		"Hazlo tuyo",
 		"Añadir cortes y subtítulos a la timeline incorpora clips editables al final del montaje. Ajusta cortes, añade textos, audio y efectos. Puedes deshacer la importación. Evita pulsarlo varias veces si no quieres repetir el montaje.",
 	],
 	[
-		"05",
+		"06",
 		"Revisa y exporta",
 		"Reproduce el principio, varios cortes y el final. Comprueba voz, música, subtítulos y encuadre. Exporta desde el editor para incluir tus capas de timeline. Guarda el archivo final y comprueba que se reproduce correctamente.",
 	],

@@ -115,6 +115,55 @@ function ZoomControls({
 			})),
 		});
 	}
+	// One-click moves: two diamonds spanning the whole clip, from its resting framing.
+	const rest = {
+		zoom: Number(element.params[paths[0]] ?? 1),
+		scaleY: Number(element.params[paths[1]] ?? 1),
+		x: Number(element.params[paths[2]] ?? 0),
+		y: Number(element.params[paths[3]] ?? 0),
+	};
+	const lastTick = Math.max(1, element.duration - 1);
+	function frame(
+		time: number,
+		[z, sy, fx, fy]: number[],
+		mode: "linear" | "bezier" | "hold",
+	) {
+		return paths.map((propertyPath, index) => ({
+			trackId,
+			elementId: element.id,
+			propertyPath,
+			time: mediaTime({ ticks: Math.round(time) }),
+			value: Math.round([z, sy, fx, fy][index] * 1000) / 1000,
+			interpolation: mode,
+		}));
+	}
+	function automatic(kind: "in" | "out" | "left" | "right" | "punch") {
+		const { zoom: z, scaleY: sy, x: rx, y: ry } = rest;
+		const push = 1.15,
+			drift = (canvas.width * (push - 1)) / 2;
+		const moves = {
+			in: [frame(0, [z, sy, rx, ry], "bezier"), frame(lastTick, [z * push, sy * push, rx, ry], "bezier")],
+			out: [frame(0, [z * push, sy * push, rx, ry], "bezier"), frame(lastTick, [z, sy, rx, ry], "bezier")],
+			left: [frame(0, [z * push, sy * push, rx + drift, ry], "linear"), frame(lastTick, [z * push, sy * push, rx - drift, ry], "linear")],
+			right: [frame(0, [z * push, sy * push, rx - drift, ry], "linear"), frame(lastTick, [z * push, sy * push, rx + drift, ry], "linear")],
+			// A cut-like jump at the playhead: hold the current framing, then hold a closer one.
+			punch: [
+				frame(Math.max(0, localTime - 1), [zoom, scaleY, x, y], "hold"),
+				frame(localTime, [zoom * 1.2, scaleY * 1.2, x * 1.2, y * 1.2], "hold"),
+			],
+		}[kind];
+		editor.timeline.upsertKeyframes({ keyframes: moves.flat() });
+	}
+	function clearAll() {
+		editor.timeline.removeKeyframes({
+			keyframes: allKeys.map((k) => ({
+				trackId,
+				elementId: element.id,
+				propertyPath: k.propertyPath,
+				keyframeId: k.id,
+			})),
+		});
+	}
 	return (
 		<div className="flex h-full flex-col gap-4 overflow-auto p-4 text-sm">
 			<h2 className="font-semibold">Zoom y encuadre ◆</h2>
@@ -122,6 +171,43 @@ function ZoomControls({
 				Guarda un rombo al inicio. Avanza el cabezal, elige otro zoom y guarda
 				un segundo rombo. El recorrido se anima con los keyframes del clip.
 			</p>
+			<section
+				className="space-y-2 rounded border border-emerald-400/20 bg-emerald-400/5 p-2"
+				aria-label="Movimiento automático"
+			>
+				<p className="text-xs font-medium">Movimiento automático · un clic</p>
+				<div className="grid grid-cols-2 gap-1.5">
+					{(
+						[
+							["in", "Acercamiento lento"],
+							["out", "Alejamiento lento"],
+							["left", "Paneo a la izquierda"],
+							["right", "Paneo a la derecha"],
+						] as const
+					).map(([kind, label]) => (
+						<Button
+							key={kind}
+							size="sm"
+							variant="outline"
+							onClick={() => automatic(kind)}
+						>
+							{label}
+						</Button>
+					))}
+				</div>
+				<Button
+					size="sm"
+					variant="outline"
+					className="w-full"
+					onClick={() => automatic("punch")}
+				>
+					Punch-in en el cabezal · +20 %
+				</Button>
+				<p className="text-[11px] text-muted-foreground">
+					Crea rombos editables en el clip. El punch-in salta al encuadre
+					cercano justo donde está el cabezal, ideal para cortes de énfasis.
+				</p>
+			</section>
 			<p className="rounded border p-2 text-xs">
 				Posición dentro del clip:{" "}
 				{mediaTimeToSeconds({ time: mediaTime({ ticks: localTime }) }).toFixed(
@@ -232,6 +318,9 @@ function ZoomControls({
 				</Button>
 				<Button variant="outline" disabled={!here.length} onClick={remove}>
 					Quitar rombo actual
+				</Button>
+				<Button variant="ghost" disabled={!allKeys.length} onClick={clearAll}>
+					Quitar todos los rombos
 				</Button>
 			</div>
 			<p className="text-xs text-muted-foreground">

@@ -12,15 +12,33 @@ import {
 import { TracksSnapshotCommand } from "@/commands/timeline/tracks-snapshot";
 import { mediaTimeFromSeconds, mediaTimeToSeconds } from "@/wasm";
 import type { VideoElement, TextElement } from "@/timeline";
+import {
+	EngineStatus,
+	JobStatus,
+	TranscriptEditor,
+	nachoApi,
+	type Job,
+} from "./nacho-assistant-parts";
+import {
+	ExportPanel,
+	PublishPanel,
+	ReviewGate,
+	ThumbnailPanel,
+} from "./nacho-publish";
+import { CreatorTools, LutPicker } from "./nacho-creator";
 
 type Project = {
 	id: string;
 	name: string;
+	reviewed?: boolean;
+	media?: { duration: number };
 	blank?: boolean;
 	revision: number;
 	settings: Record<string, number | string | boolean>;
 	clips: { enabled: boolean; start: number; end: number }[];
-	jobs: { id: string; status: string; message: string }[];
+	jobs: Job[];
+	transcriptSegments?: number;
+	lastInstruction?: { prompt: string; explanation: string; engine?: string };
 	stickmen?: {
 		enabled: boolean;
 		mode: "overlay" | "cut";
@@ -58,28 +76,13 @@ type PromptPlan = {
 		extra: boolean;
 	}[];
 	cuts: { seconds: number; pieces: number; extra: boolean };
+	engine?: "rules" | "ollama";
+	fallbackReason?: string;
 	projectId: string;
 	revision: number;
 	prompt: string;
 };
-async function api<T>(path: string, data?: unknown): Promise<T> {
-	const headers: Record<string, string> = {};
-	if (data !== undefined) {
-		const session = await fetch("/nacho-api/session");
-		if (!session.ok) throw Error("El motor local no responde");
-		headers["x-studio-token"] = (await session.json()).token;
-		headers["Content-Type"] = "application/json";
-	}
-	const response = await fetch("/nacho-api" + path, {
-		method: data === undefined ? "GET" : "POST",
-		headers,
-		body: data === undefined ? undefined : JSON.stringify(data),
-	});
-	const result = await response.json();
-	if (!response.ok)
-		throw Error(result.error || "No se pudo completar la operación");
-	return result;
-}
+const api = nachoApi;
 const faceControls = [
 	["faceSmooth", "Suavidad de piel"],
 	["faceLight", "Luz del rostro"],
@@ -112,7 +115,17 @@ export function NachoAssistant() {
 		),
 		[showPreview, setShowPreview] = useState(false);
 	const generation = useRef(0);
+	// Polls immediately (e.g. right after queueing or cancelling a job) without resetting the panel.
+	const wake = useRef<() => void>(() => {});
 	const [plan, setPlan] = useState<PromptPlan | null>(null);
+	// Short-form videos read better with fewer words per caption; remembered per browser.
+	const [captionWords, setCaptionWords] = useState(5);
+	useEffect(() => {
+		try {
+			const saved = Number(localStorage.getItem("elite-caption-words"));
+			if ([1, 2, 3, 5].includes(saved)) setCaptionWords(saved);
+		} catch {}
+	}, []);
 	const planIsCurrent =
 		plan &&
 		plan.projectId === project?.id &&
@@ -151,10 +164,14 @@ export function NachoAssistant() {
 		let timer: ReturnType<typeof setTimeout>;
 		async function poll() {
 			try {
-				const p = await api<Project>("/projects/" + selected);
+				const p = await api<Project>("/projects/" + selected + "?lite=1");
 				if (alive) {
 					setProject(p);
-					timer = setTimeout(poll, 2000);
+					// Fast while the engine works, relaxed when idle.
+					const live = p.jobs?.some((j) =>
+						["queued", "running"].includes(j.status),
+					);
+					timer = setTimeout(poll, live ? 1200 : 6000);
 				}
 			} catch (e) {
 				if (alive) {
@@ -163,10 +180,15 @@ export function NachoAssistant() {
 				}
 			}
 		}
+		wake.current = () => {
+			clearTimeout(timer);
+			void poll();
+		};
 		void poll();
 		return () => {
 			alive = false;
 			clearTimeout(timer);
+			wake.current = () => {};
 		};
 	}, [selected, activeId]);
 	useEffect(() => {
@@ -190,9 +212,25 @@ export function NachoAssistant() {
 	async function job(type: string) {
 		if (!project) return;
 		await api("/projects/" + project.id + "/job", { type });
-		setProject(await api("/projects/" + project.id));
+		wake.current();
 		setShowPreview(false);
 		setMessage("Trabajo enviado. El progreso aparece aquí.");
+	}
+	async function previewPlan() {
+		if (!project) return;
+		const epoch = generation.current;
+		setPlan(null);
+		const result = await api<PromptPlan>("/projects/" + project.id + "/plan", {
+			prompt,
+			revision: project.revision,
+		});
+		if (epoch !== generation.current) return;
+		setPlan({
+			...result,
+			projectId: project.id,
+			revision: project.revision,
+			prompt,
+		});
 	}
 	async function upload(file: File) {
 		const session = await api<{ token: string }>("/session");
@@ -214,6 +252,21 @@ export function NachoAssistant() {
 			} catch {}
 		}
 	}
+	// Saves every staged finishing control (retouch, voice, look, loudness target) in one go.
+	async function saveFinish() {
+		if (!project) return;
+		const epoch = generation.current;
+		const updated = await api<Project>("/projects/" + project.id + "/portrait", {
+			revision: project.revision,
+			settings: face,
+		});
+		if (epoch !== generation.current) return;
+		setProject(updated);
+		setShowPreview(false);
+		setMessage(
+			"Ajustes guardados. Prepara el original mejorado para aplicarlos a tu timeline.",
+		);
+	}
 	async function updateStickman(data: Record<string, unknown>) {
 		if (!project) return;
 		const epoch = generation.current;
@@ -231,7 +284,10 @@ export function NachoAssistant() {
 			epoch = generation.current,
 			sceneId = editor.scenes.getActiveScene().id;
 		const manifest = await api<Manifest>(
-			"/projects/" + project.id + "/opencut",
+			"/projects/" +
+				project.id +
+				"/opencut" +
+				(captionWords !== 5 ? `?words=${captionWords}` : ""),
 		);
 		const marker = `nacho-${project.id}.mp4`;
 		let asset = editor.media.getAssets().find((a) => a.name === marker);
@@ -294,7 +350,17 @@ export function NachoAssistant() {
 				}) as VideoElement,
 		);
 		const height =
-			editor.project.getActive()?.settings.canvasSize.height || 1080;
+				editor.project.getActive()?.settings.canvasSize.height || 1080,
+			width = editor.project.getActive()?.settings.canvasSize.width || 1920;
+		// Text size is relative to canvas height (1 unit = height / 90 px). Fit each cue
+		// within ~90 % of the width so long lines never spill off a vertical canvas.
+		const captionSize = (text: string) =>
+			Math.round(
+				Math.max(
+					2.2,
+					Math.min(6, (0.9 * width * 90) / (Math.max(8, text.length) * 0.56 * height)),
+				) * 10,
+			) / 10;
 		const captions = manifest.captions.map(
 			(c) =>
 				({
@@ -304,7 +370,18 @@ export function NachoAssistant() {
 							duration: seconds(c.end - c.start),
 							params: {
 								content: c.text,
-								"transform.positionY": -height * 0.38,
+								fontSize: captionSize(c.text),
+								fontWeight: "bold",
+								"background.enabled": true,
+								"background.color": "#111827",
+								"background.paddingX": 16,
+								"background.paddingY": 8,
+								"background.cornerRadius": 8,
+								// Canvas Y grows downwards: honour the project's caption position.
+								"transform.positionY":
+									(project.settings.subtitlePosition === "top" ? -1 : 1) *
+									height *
+									0.38,
 							},
 						},
 						startTime: seconds(offset + c.start),
@@ -484,12 +561,23 @@ export function NachoAssistant() {
 	}
 	return (
 		<div className="flex h-full flex-col gap-4 overflow-y-auto p-4 text-sm">
-			<div>
-				<h2 className="font-semibold">Asistente IA · Elite Editor</h2>
-				<p className="text-muted-foreground text-xs">
-					Analiza, monta y retoca desde este editor.
-				</p>
+			<div className="flex items-center gap-3">
+				<span
+					className="xeno-orbit"
+					data-busy={working || running}
+					aria-hidden
+				/>
+				<div className="min-w-0">
+					<p className="xeno-kicker">Sistema local · sin nube</p>
+					<h2 className="xeno-holo-text text-base font-semibold tracking-wide">
+						Asistente IA
+					</h2>
+					<p className="text-muted-foreground text-xs">
+						Analiza, monta, limpia y publica desde este editor.
+					</p>
+				</div>
 			</div>
+			<EngineStatus />
 			<label className="flex flex-col gap-2">
 				Grabación original
 				<select
@@ -542,8 +630,8 @@ export function NachoAssistant() {
 			) : null}
 			{project ? (
 				<>
-					<section className="space-y-2 rounded border p-3">
-						<h3 className="font-medium">1. Analizar y proponer cortes</h3>
+					<section className="xeno-card space-y-2 p-3">
+						<h3 className="xeno-heading" data-index="01">Analizar y proponer</h3>
 						<Button
 							disabled={disabled}
 							onClick={() => void act(() => job("analyze"))}
@@ -558,17 +646,46 @@ export function NachoAssistant() {
 							Montaje automático + previsualización
 						</Button>
 						{project.jobs.at(-1) ? (
-							<p role="status" className="break-words text-xs">
-								{project.jobs.at(-1)!.status} · {project.jobs.at(-1)!.message}
-							</p>
+							<JobStatus
+								projectId={project.id}
+								job={project.jobs.at(-1)!}
+								onChanged={() => wake.current()}
+							/>
 						) : null}
+						<ReviewGate
+							project={project}
+							disabled={disabled}
+							onUpdated={setProject}
+							onError={setError}
+							onMessage={setMessage}
+						/>
 					</section>
-					<section className="space-y-2 rounded border p-3">
-						<h3 className="font-medium">2. Editar en la timeline</h3>
+					<section className="xeno-card space-y-2 p-3">
+						<h3 className="xeno-heading" data-index="02">Llevar a la timeline</h3>
 						<p className="text-xs text-muted-foreground">
 							{project.clips.filter((c) => c.enabled).length} cortes activos. Se
 							añaden al final y se pueden deshacer.
 						</p>
+						<label className="flex items-center justify-between gap-2 text-xs">
+							Palabras por subtítulo
+							<select
+								aria-label="Palabras por subtítulo"
+								className="rounded border bg-background p-1.5"
+								value={captionWords}
+								onChange={(e) => {
+									const value = Number(e.target.value);
+									setCaptionWords(value);
+									try {
+										localStorage.setItem("elite-caption-words", String(value));
+									} catch {}
+								}}
+							>
+								<option value={5}>Frases · hasta 5</option>
+								<option value={3}>Ágil · 3</option>
+								<option value={2}>Dinámico · 2</option>
+								<option value={1}>Palabra a palabra · 1</option>
+							</select>
+						</label>
 						<Button disabled={disabled} onClick={() => void act(importCuts)}>
 							Añadir cortes y subtítulos a la timeline
 						</Button>
@@ -580,19 +697,60 @@ export function NachoAssistant() {
 							Enviar mis cortes al motor
 						</Button>
 					</section>
-					<section className="space-y-2 rounded border p-3">
-						<h3 className="font-medium">
-							Editar la propuesta con instrucciones
-						</h3>
+					<section className="xeno-card space-y-2 p-3">
+						<h3 className="xeno-heading" data-index="03">Editar por texto</h3>
+						<p className="text-xs text-muted-foreground">
+							Lee la transcripción, escucha cada frase y quítala o recupérala de
+							la propuesta. Después añádela a la timeline.
+						</p>
+						<TranscriptEditor
+							project={project}
+							disabled={disabled}
+							onUpdated={(updated) => {
+								setProject(updated);
+								setShowPreview(false);
+							}}
+							onError={setError}
+							onMessage={setMessage}
+						/>
+					</section>
+					<section className="xeno-card space-y-2 p-3">
+						<h3 className="xeno-heading" data-index="04">Instrucciones</h3>
 						<Input
 							aria-label="Instrucción de edición"
 							placeholder="Por ejemplo: elimina los primeros 5 segundos"
 							value={prompt}
 							onChange={(e) => setPrompt(e.target.value)}
+							onKeyDown={(e) => {
+								if (e.key === "Enter" && !disabled && prompt.trim().length >= 3)
+									void act(previewPlan);
+							}}
 						/>
+						<div className="flex flex-wrap gap-1" aria-label="Ejemplos de instrucciones">
+							{[
+								"Quita los primeros 5 segundos",
+								"Sube un poco el contraste",
+								"Formato vertical para TikTok",
+								"Subtítulos estilo viral",
+								"Ilumina mi cara",
+								"Hazlo más dinámico",
+							].map((example) => (
+								<button
+									key={example}
+									type="button"
+									className="xeno-chip px-2 py-0.5 text-muted-foreground"
+									onClick={() => {
+										setPrompt(example);
+										setPlan(null);
+									}}
+								>
+									{example}
+								</button>
+							))}
+						</div>
 						<p className="text-xs text-muted-foreground">
-							Describe ajustes de voz, luz, color o cortes del original. Revisa
-							la propuesta antes de aplicarla.
+							Describe ajustes de voz, luz, color, formato o cortes del original.
+							Pulsa Intro para ver la propuesta antes de aplicarla.
 						</p>
 						<div className="flex flex-wrap gap-2">
 							<Button
@@ -620,23 +778,7 @@ export function NachoAssistant() {
 							<Button
 								variant="outline"
 								disabled={disabled || prompt.trim().length < 3}
-								onClick={() =>
-									void act(async () => {
-										const epoch = generation.current;
-										setPlan(null);
-										const result = await api<PromptPlan>(
-											"/projects/" + project.id + "/plan",
-											{ prompt, revision: project.revision },
-										);
-										if (epoch !== generation.current) return;
-										setPlan({
-											...result,
-											projectId: project.id,
-											revision: project.revision,
-											prompt,
-										});
-									})
-								}
+								onClick={() => void act(previewPlan)}
 							>
 								Ver qué cambiaría
 							</Button>
@@ -646,7 +788,19 @@ export function NachoAssistant() {
 								className="space-y-2 rounded border border-emerald-400/30 bg-emerald-400/5 p-3 text-xs"
 								aria-live="polite"
 							>
-								<p>{plan.explanation}</p>
+								<p className="flex flex-wrap items-center gap-2">
+									<span
+										className={`rounded-full border px-2 py-0.5 text-[10px] ${plan.engine === "rules" ? "border-sky-400/40 text-sky-300" : "border-violet-400/40 text-violet-300"}`}
+									>
+										{plan.engine === "rules"
+											? "Reglas locales · exactas"
+											: "IA local (Ollama)"}
+									</span>
+									<span>{plan.explanation}</span>
+								</p>
+								{plan.fallbackReason ? (
+									<p className="text-amber-300">{plan.fallbackReason}</p>
+								) : null}
 								<ul className="space-y-1">
 									{plan.changes.map((change) => (
 										<li key={change.key}>
@@ -693,9 +847,37 @@ export function NachoAssistant() {
 						>
 							Aplicar a la propuesta IA
 						</Button>
+						{project.lastInstruction ? (
+							<div className="flex flex-wrap items-center justify-between gap-2 rounded border border-dashed p-2 text-xs">
+								<span className="text-muted-foreground">
+									Último cambio: {project.lastInstruction.explanation}
+								</span>
+								<Button
+									size="sm"
+									variant="ghost"
+									disabled={disabled}
+									onClick={() =>
+										void act(async () => {
+											const epoch = generation.current;
+											const updated = await api<Project>(
+												"/projects/" + project.id + "/undo",
+												{},
+											);
+											if (epoch !== generation.current) return;
+											setProject(updated);
+											setPlan(null);
+											setShowPreview(false);
+											setMessage("Cambio deshecho en la propuesta.");
+										})
+									}
+								>
+									Deshacer
+								</Button>
+							</div>
+						) : null}
 					</section>
-					<section className="space-y-3 rounded border p-3">
-						<h3 className="font-medium">Explicar con stickman</h3>
+					<section className="xeno-card space-y-3 p-3">
+						<h3 className="xeno-heading" data-index="05">Explicar con stickman</h3>
 						<p className="text-xs text-muted-foreground">
 							Busca conceptos en la transcripción y crea ilustraciones animadas
 							localmente. Revisa las ideas antes de renderizar.
@@ -807,8 +989,8 @@ export function NachoAssistant() {
 							</>
 						) : null}
 					</section>
-					<section className="space-y-3 rounded border p-3">
-						<h3 className="font-medium">Acabado de vídeo, voz y belleza</h3>
+					<section className="xeno-card space-y-3 p-3">
+						<h3 className="xeno-heading" data-index="06">Acabado de vídeo, voz y belleza</h3>
 						<p className="text-xs text-muted-foreground">
 							Ajusta manualmente, guarda y prepara el original mejorado. Después
 							aplícalo a tu timeline. Compara con el original; no se modifica tu
@@ -863,7 +1045,7 @@ export function NachoAssistant() {
 							/>
 							Limpiar ruido y normalizar voz
 						</label>
-						<details className="space-y-3 rounded border p-3" open>
+						<details className="xeno-card space-y-3 p-3" open>
 							<summary className="cursor-pointer text-xs font-medium">
 								Limpieza manual de vídeo y audio
 							</summary>
@@ -914,7 +1096,8 @@ export function NachoAssistant() {
 										setFace((v) => ({ ...v, audioNormalize: e.target.checked }))
 									}
 								/>
-								Normalizar voz a −16 LUFS
+								Normalizar voz a{" "}
+								{String(face.audioTargetLufs ?? -16).replace("-", "−")} LUFS
 							</label>
 							<p className="text-xs text-muted-foreground">
 								Los controles de voz requieren activar Limpiar ruido y
@@ -952,23 +1135,15 @@ export function NachoAssistant() {
 								/>
 							</label>
 						))}
+						<LutPicker
+							value={String(face.lut ?? "")}
+							disabled={disabled}
+							onChange={(stem) => setFace((v) => ({ ...v, lut: stem }))}
+						/>
 						<Button
 							variant="outline"
 							disabled={disabled}
-							onClick={() =>
-								void act(async () => {
-									setProject(
-										await api("/projects/" + project.id + "/portrait", {
-											revision: project.revision,
-											settings: face,
-										}),
-									);
-									setShowPreview(false);
-									setMessage(
-										"Ajustes guardados. Prepara el original mejorado para aplicarlos a tu timeline.",
-									);
-								})
-							}
+							onClick={() => void act(saveFinish)}
 						>
 							Guardar retoque
 						</Button>
@@ -1001,8 +1176,8 @@ export function NachoAssistant() {
 							preparar otra versión; no es un filtro en tiempo real.
 						</p>
 					</section>
-					<section className="space-y-2 rounded border p-3">
-						<h3 className="font-medium">Previsualización procesada</h3>
+					<section className="xeno-card space-y-2 p-3">
+						<h3 className="xeno-heading" data-index="07">Previsualización procesada</h3>
 						<Button
 							disabled={disabled}
 							onClick={() => void act(() => job("preview"))}
@@ -1028,6 +1203,54 @@ export function NachoAssistant() {
 							Muestra el montaje del motor. Para exportar la timeline completa
 							con tus capas manuales utiliza Exportar de OpenCut.
 						</p>
+					</section>
+					<section className="xeno-card space-y-3 p-3">
+						<h3 className="xeno-heading" data-index="08">Exportar y publicar</h3>
+						<ExportPanel
+							project={project}
+							disabled={disabled}
+							onUpdated={setProject}
+							onError={setError}
+							onMessage={setMessage}
+							onJob={job}
+						/>
+						<details className="rounded border p-2">
+							<summary className="cursor-pointer text-xs font-medium">
+								Miniatura
+							</summary>
+							<div className="mt-2">
+								<ThumbnailPanel
+									project={project}
+									disabled={disabled}
+									onUpdated={setProject}
+									onError={setError}
+									onMessage={setMessage}
+								/>
+							</div>
+						</details>
+						<details className="rounded border p-2" open>
+							<summary className="cursor-pointer text-xs font-medium">
+								Títulos, descripción y capítulos
+							</summary>
+							<div className="mt-2">
+								<PublishPanel project={project} disabled={disabled} onError={setError} />
+							</div>
+						</details>
+					</section>
+					<section className="xeno-card space-y-3 p-3">
+						<h3 className="xeno-heading" data-index="09">Creadores</h3>
+						<CreatorTools
+							project={project}
+							disabled={disabled}
+							settings={face}
+							onSetting={(patch) => setFace((v) => ({ ...v, ...patch }))}
+							onSave={() => void act(saveFinish)}
+							onUpdated={(updated) => {
+								setProject(updated);
+								setShowPreview(false);
+							}}
+							onMessage={setMessage}
+						/>
 					</section>
 				</>
 			) : null}

@@ -310,7 +310,7 @@ function PreviewCanvas({
 							>
 							<div
 								ref={canvasMountRef}
-								className="absolute block border"
+								className="xeno-viewport absolute block border"
 								style={{
 									left: viewport.sceneLeft,
 									top: viewport.sceneTop,

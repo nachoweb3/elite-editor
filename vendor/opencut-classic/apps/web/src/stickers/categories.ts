@@ -1,7 +1,9 @@
+// Tab order in the Stickers panel. Each key (except "all") is a provider id.
 export const STICKER_CATEGORIES = {
-	all: "All",
-	// v0.4.0
-	// logos: "Logos",
-	flags: "Flags",
-	shapes: "Shapes",
+	all: "Todo",
+	memes: "Memes",
+	emoji: "Emoji",
+	callouts: "Llamadas",
+	shapes: "Formas",
+	flags: "Banderas",
 };

@@ -20,7 +20,7 @@ interface PolygonParams {
 const POLYGON_PARAMS: ParamDefinition<keyof PolygonParams & string>[] = [
 	{
 		key: "fill",
-		label: "Fill",
+		label: "Relleno",
 		type: "color",
 		default: "#ffffff",
 	},
@@ -33,7 +33,7 @@ const POLYGON_PARAMS: ParamDefinition<keyof PolygonParams & string>[] = [
 	},
 	{
 		key: "strokeWidth",
-		label: "Width",
+		label: "Grosor",
 		type: "number",
 		default: 0,
 		min: 0,
@@ -45,7 +45,7 @@ const POLYGON_PARAMS: ParamDefinition<keyof PolygonParams & string>[] = [
 	STROKE_ALIGN_PARAM,
 	{
 		key: "sides",
-		label: "Sides",
+		label: "Lados",
 		type: "number",
 		default: 5,
 		min: 3,
@@ -55,7 +55,7 @@ const POLYGON_PARAMS: ParamDefinition<keyof PolygonParams & string>[] = [
 	},
 	{
 		key: "cornerRadius",
-		label: "Corner radius",
+		label: "Redondeo de esquinas",
 		type: "number",
 		default: 0,
 		min: 0,
@@ -166,7 +166,7 @@ function traceRoundedPolygonPath({
 
 export const polygonGraphicDefinition: GraphicDefinition = {
 	id: "polygon",
-	name: "Polygon",
+	name: "Polígono",
 	keywords: ["polygon", "triangle", "pentagon", "hexagon", "diamond"],
 	params: POLYGON_PARAMS,
 	render({ ctx, params, width, height }) {

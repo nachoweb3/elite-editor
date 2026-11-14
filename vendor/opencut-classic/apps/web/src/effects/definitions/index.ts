@@ -1,8 +1,9 @@
 import { effectsRegistry } from "../registry";
 import { blurEffectDefinition } from "./blur";
 import {eliteEffects} from './elite';
+import {beautyDefinition} from './beauty';
 
-const defaultEffects = [blurEffectDefinition,...eliteEffects];
+const defaultEffects = [blurEffectDefinition,...eliteEffects,beautyDefinition];
 
 export function registerDefaultEffects(): void {
 	for (const definition of defaultEffects) {

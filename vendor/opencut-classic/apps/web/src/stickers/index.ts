@@ -73,10 +73,13 @@ function getStickerNameFromId({ stickerId }: { stickerId: string }): string {
 	if (stickerIdParts.length <= 1) {
 		return stickerId;
 	}
-	return (
-		stickerIdParts.slice(1).join(":").split(":").pop()?.replaceAll("-", " ") ??
-		stickerId
-	);
+	const last = stickerIdParts.slice(1).join(":").split(":").pop() ?? stickerId;
+	// Custom meme stickers store their text URI-encoded.
+	try {
+		return decodeURIComponent(last).replaceAll("-", " ");
+	} catch {
+		return last.replaceAll("-", " ");
+	}
 }
 
 function toRecentStickerItem({
@@ -243,7 +246,7 @@ export async function browseAll({
 	if (recentItems.length > 0) {
 		sections.push({
 			id: "recent",
-			title: "Recently used",
+			title: "Usados recientemente",
 			items: recentItems.slice(0, limit),
 			hasMore: recentItems.length > limit,
 			layout: "row",

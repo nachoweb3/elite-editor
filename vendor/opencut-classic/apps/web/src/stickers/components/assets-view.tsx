@@ -25,6 +25,8 @@ import type {
 	StickerItem as StickerData,
 } from "@/stickers";
 import { useStickersStore } from "@/stickers/stickers-store";
+import { MEME_STYLES, memeSvg, svgUrl, type MemeStyle } from "@/stickers/providers/elite-art";
+import { memeStickerId } from "@/stickers/providers/elite-pack";
 import { cn } from "@/utils/ui";
 import {
 	HappyIcon,
@@ -55,7 +57,7 @@ export function StickersView() {
 				<Input
 					size="sm"
 					variant="default"
-					placeholder="Search..."
+					placeholder="Buscar memes, emoji, flechas, banderas…"
 					value={searchQuery}
 					onChange={(e) => {
 						setSearchQuery({ query: e.target.value });
@@ -79,7 +81,7 @@ export function StickersView() {
 				variant="underline"
 				className="mt-2 flex min-h-0 flex-1 flex-col"
 			>
-				<TabsList aria-label="Sticker categories">
+				<TabsList aria-label="Categorías de stickers">
 					{Object.entries(STICKER_CATEGORIES).map(([key, label]) => (
 						<TabsTrigger key={key} value={key}>
 							{label}
@@ -87,6 +89,9 @@ export function StickersView() {
 					))}
 				</TabsList>
 				<div className="min-h-0 flex-1 overflow-y-auto px-4 pt-4">
+					{selectedCategory === "memes" || selectedCategory === "all" ? (
+						<MemeMaker />
+					) : null}
 					<StickersContentView />
 				</div>
 			</Tabs>
@@ -141,7 +146,7 @@ function EmptyView({ message }: { message: string }) {
 				className="text-muted-foreground size-10"
 			/>
 			<div className="flex flex-col gap-2 text-center">
-				<p className="text-lg font-medium">No stickers found</p>
+				<p className="text-lg font-medium">Sin resultados</p>
 				<p className="text-muted-foreground text-sm text-balance">{message}</p>
 			</div>
 		</div>
@@ -205,7 +210,7 @@ function StickersContentView() {
 					{isRegionSearch && <RegionBanner region={regionLabel} />}
 					<div className="flex items-center justify-between">
 						<span className="text-muted-foreground text-sm">
-							{searchResults.total} results
+							{searchResults.total} resultados
 						</span>
 					</div>
 					<StickerGrid items={searchResults.items} />
@@ -215,7 +220,7 @@ function StickersContentView() {
 
 		// "all" tab search — sections are in browseContent, fall through to section rendering below
 		if (selectedCategory !== "all" && searchQuery) {
-			return <EmptyView message={`No stickers found for "${searchQuery}"`} />;
+			return <EmptyView message={`Nada coincide con «${searchQuery}»`} />;
 		}
 	}
 
@@ -233,10 +238,10 @@ function StickersContentView() {
 			<EmptyView
 				message={
 					viewMode === "search"
-						? `No stickers found for "${searchQuery}"`
+						? `Nada coincide con «${searchQuery}»`
 						: selectedCategory === "all"
-							? "No stickers available yet."
-							: `No stickers available in ${categoryLabel.toLowerCase()} yet.`
+							? "Aún no hay stickers disponibles."
+							: `Aún no hay stickers en ${categoryLabel.toLowerCase()}.`
 				}
 			/>
 		);
@@ -288,7 +293,7 @@ function StickerSection({
 								size="sm"
 								className="h-auto gap-1 p-0 text-xs text-muted-foreground"
 							>
-								Clear
+								Borrar
 							</Button>
 						)}
 
@@ -301,7 +306,7 @@ function StickerSection({
 									onSeeAll(section.action?.category as StickerCategory);
 								}}
 							>
-								See all
+								Ver todo
 							</Button>
 						)}
 					</div>
@@ -380,7 +385,7 @@ function StickerItem({
 			addToRecentStickers({ stickerId: item.id });
 		} catch (error) {
 			console.error("Failed to add sticker:", error);
-			toast.error("Failed to add sticker to timeline");
+			toast.error("No se pudo añadir el sticker a la timeline");
 		} finally {
 			setIsAdding(false);
 		}
@@ -451,5 +456,63 @@ function StickerItem({
 				</div>
 			)}
 		</div>
+	);
+}
+
+/* ------------------------------ Meme maker ------------------------------- */
+
+// Any text, any style: the sticker id carries both, so it renders offline forever.
+function MemeMaker() {
+	const [text, setText] = useState("");
+	const [style, setStyle] = useState<MemeStyle>("impact");
+	const value = text.trim() || "TU TEXTO";
+	const item: StickerData = {
+		id: memeStickerId(style, value),
+		provider: "memes",
+		name: value,
+		previewUrl: svgUrl(memeSvg(style, value)),
+		metadata: {},
+	};
+	return (
+		<section
+			className="xeno-card mb-4 space-y-2 p-3"
+			aria-label="Crear sticker de texto"
+		>
+			<p className="xeno-kicker">Crea tu sticker de meme</p>
+			<Input
+				size="sm"
+				aria-label="Texto del sticker"
+				placeholder="Escribe tu frase: «cuando el código compila»"
+				maxLength={40}
+				value={text}
+				onChange={(e) => setText(e.target.value)}
+			/>
+			<div className="flex flex-wrap gap-1" role="radiogroup" aria-label="Estilo del sticker">
+				{(Object.entries(MEME_STYLES) as [MemeStyle, string][]).map(([key, label]) => (
+					<button
+						key={key}
+						type="button"
+						role="radio"
+						aria-checked={style === key}
+						className={cn(
+							"xeno-chip px-2 py-0.5",
+							style === key ? "text-[#5effc8]" : "text-muted-foreground",
+						)}
+						onClick={() => setStyle(key)}
+					>
+						{label}
+					</button>
+				))}
+			</div>
+			<div className="flex items-center gap-3">
+				<div className="w-28 shrink-0">
+					<StickerItem item={item} shouldCapSize containerClassName="w-full" />
+				</div>
+				<p className="text-muted-foreground text-xs">
+					Haz clic para añadirlo al cabezal o arrástralo a la timeline. Se
+					guarda en el proyecto y funciona sin conexión.
+				</p>
+			</div>
+		</section>
 	);
 }

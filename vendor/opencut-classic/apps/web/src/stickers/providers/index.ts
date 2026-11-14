@@ -3,11 +3,16 @@ import type { StickerProvider } from "@/stickers/types";
 import { flagsProvider } from "./flags";
 import { logosProvider } from "./logos";
 import { shapesProvider } from "./shapes";
+import { calloutsProvider, emojiProvider, memesProvider } from "./elite-pack";
 
+// Registration order is the order of the "Todo" overview.
 const defaultProviders: StickerProvider[] = [
-	logosProvider,
-	flagsProvider,
+	memesProvider,
+	emojiProvider,
+	calloutsProvider,
 	shapesProvider,
+	flagsProvider,
+	logosProvider,
 ];
 
 export function registerDefaultStickerProviders({

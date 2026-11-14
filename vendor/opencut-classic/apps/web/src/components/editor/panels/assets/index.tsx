@@ -10,6 +10,7 @@ import { Captions } from "@/subtitles/components/assets-view";
 import { NachoResources } from "./views/nacho-resources";
 import { NachoAssistant } from "./views/nacho-assistant";
 import { NachoGenerate } from "./views/nacho-generate";
+import { LibraryPanel } from "./views/library-panel";
 import { MediaView } from "./views/assets";
 import { SettingsView } from "./views/settings";
 import { SoundsView } from "@/sounds/components/assets-view";
@@ -28,6 +29,7 @@ export function AssetsPanel() {
 		assistant: <NachoAssistant />,
 		generate: <NachoGenerate />,
 		nacho: <NachoResources />,
+		library: <LibraryPanel />,
 		media: <MediaView />,
 		sounds: <EliteAudio />,
 		background: <EffectsView category="background" />,
