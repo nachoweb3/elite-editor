@@ -8,12 +8,19 @@ Después de las pruebas y del commit del editor:
 
 ```powershell
 node scripts/export-landing.mjs ../Elite-Editor-landing
+node scripts/build-browser-editor.mjs ../Elite-Editor-landing/editor
 ```
 
 El exportador reutiliza la página y los estilos del editor y genera HTML estático.
-Los enlaces a proyectos llevan a la sección de acceso, que explica el arranque
-local y enlaza a `http://127.0.0.1:5181/projects`. Pages no ejecuta Node, FFmpeg ni
-los modelos locales. La maqueta del hero es ilustrativa, no una sesión del editor.
+Los botones de inicio llevan a `./editor/#/projects`: el editor real se ejecuta
+en el navegador, con navegación hash compatible con Pages y proyectos guardados
+en IndexedDB/OPFS. Se reutilizan las pantallas, timeline, efectos y exportación
+de OpenCut; una pequeña capa adapta los enlaces de Next al sitio estático.
+Pages no ejecuta Node ni FFmpeg. Las herramientas que requieren el backend se
+identifican en la interfaz; nunca se intenta contactar con localhost desde Pages.
+Los sonidos incluidos se copian solo desde los packs CC0 del código, sin incluir
+la biblioteca privada, claves, proyectos ni archivos importados del autor.
+La maqueta del hero sigue siendo ilustrativa.
 
 Revisar y subir los cambios del checkout de landing; esperar al despliegue Pages
 y comprobar la etiqueta `elite-editor-revision` del HTML publicado. Los paquetes
@@ -28,5 +35,5 @@ y verificarlos; publicar el código no los actualiza.
   sus botones se desactivan cuando el backend indica que no están disponibles.
 - Belleza en directo: acabado GPU en una zona oval manual. No sigue el rostro ni
   cambia su geometría en directo. El procesamiento previo mantiene sus controles propios.
-- Validación DOM simulada y FFmpeg real; no equivale a verificar reproducción y
-  exportación del editor completo en un navegador.
+- La compilación del editor web se comprueba en CI. Validar también desde la URL
+  pública: crear proyecto, añadir elementos, recargar y exportar una prueba corta.

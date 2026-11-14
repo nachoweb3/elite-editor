@@ -7,7 +7,7 @@ runtime/
 models/
 cache/
 logs/
-projects/
+/projects/
 input/
 output/
 thumbnails/

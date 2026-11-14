@@ -1,0 +1,135 @@
+.universe {
+	position: relative;
+	isolation: isolate;
+	min-height: 100vh;
+	background: #030509;
+	color: #f4f7fa;
+}
+.stars {
+	position: fixed;
+	inset: 0;
+	z-index: -1;
+	overflow: hidden;
+	pointer-events: none;
+	background:
+		radial-gradient(ellipse at 25% 0%, #12423b55, transparent 55%),
+		radial-gradient(ellipse at 90% 60%, #35235840, transparent 50%);
+}
+.stars::before,
+.stars::after {
+	content: "";
+	position: absolute;
+	inset: -120px;
+	background-image:
+		radial-gradient(1px 1px at 21px 35px, #e2fffa 95%, transparent),
+		radial-gradient(1px 1px at 150px 120px, #b7bcff 95%, transparent),
+		radial-gradient(2px 2px at 275px 220px, #ffffffaa 95%, transparent);
+	background-size: 330px 290px;
+	animation: drift 55s linear infinite alternate;
+}
+.stars::after {
+	background-size: 470px 410px;
+	opacity: 0.45;
+	transform: rotate(12deg);
+	animation-duration: 85s;
+	animation-direction: alternate-reverse;
+}
+.banner {
+	margin: 0 auto;
+	max-width: 1400px;
+	padding: 28px 32px 20px;
+	display: flex;
+	flex-wrap: wrap;
+	align-items: center;
+	justify-content: space-between;
+	gap: 16px;
+}
+.credit {
+	display: inline-flex;
+	flex-wrap: wrap;
+	gap: 6px;
+	align-items: center;
+	padding: 10px 16px;
+	border: 1px solid #77f9d63d;
+	border-radius: 999px;
+	background: #071c1bd9;
+	box-shadow: 0 0 32px #5bffd715;
+	font-size: 13px;
+}
+.credit strong {
+	color: #96ffe1;
+	text-shadow: 0 0 16px #66ffd477;
+}
+.motto {
+	color: #c5cde0;
+	font-size: 11px;
+	font-weight: 600;
+	letter-spacing: 0.19em;
+	text-transform: uppercase;
+}
+/* A slow ultraviolet portal behind the header. */
+.portal {
+	position: fixed;
+	top: -28vmax;
+	right: -18vmax;
+	width: 62vmax;
+	height: 62vmax;
+	z-index: -1;
+	pointer-events: none;
+	border-radius: 50%;
+	background:
+		radial-gradient(circle, transparent 52%, #5effc814 55%, transparent 58%),
+		radial-gradient(circle, transparent 62%, #a78bfa1f 64%, transparent 67%),
+		conic-gradient(from 0deg, #5effc800, #5effc833, #38e8ff22, #a78bfa40, #5effc800 70%);
+	filter: blur(1px);
+	mask-image: radial-gradient(circle, #000 35%, transparent 70%);
+	animation: portal 90s linear infinite;
+}
+.hero {
+	margin: 0 auto;
+	max-width: 1400px;
+	padding: 4px 32px 18px;
+	display: flex;
+	align-items: center;
+	gap: 18px;
+}
+.title {
+	font-family: var(--xeno-font-display, system-ui);
+	font-size: clamp(2rem, 4.5vw, 3.4rem);
+	font-weight: 700;
+	line-height: 1;
+	letter-spacing: 0.04em;
+	text-transform: uppercase;
+	margin: 6px 0 8px;
+}
+.lead {
+	max-width: 46rem;
+	color: #b9c4e3;
+	font-size: 0.92rem;
+}
+.thumb {
+	border-radius: 14px;
+	overflow: hidden;
+	box-shadow: 0 0 0 1px #8c96ff22, 0 18px 40px -26px #000;
+	transition: box-shadow 0.4s;
+}
+:global(.xeno-tile):hover .thumb {
+	box-shadow: 0 0 0 1px #5effc8aa, 0 0 34px -10px #5effc8cc;
+}
+@keyframes portal {
+	to {
+		rotate: 360deg;
+	}
+}
+@keyframes drift {
+	to {
+		translate: 65px 100px;
+	}
+}
+@media (prefers-reduced-motion: reduce) {
+	.stars::before,
+	.stars::after,
+	.portal {
+		animation: none;
+	}
+}

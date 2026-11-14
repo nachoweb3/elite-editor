@@ -6,6 +6,7 @@
   "scripts": {
     "dev": "node scripts/opencut-dev.mjs",
     "build": "tsc --noEmit && vite build",
+    "build:browser": "node scripts/build-browser-editor.mjs",
     "start": "node server/index.mjs",
     "doctor": "node scripts/cli.mjs doctor",
     "analyze": "node scripts/cli.mjs analyze",

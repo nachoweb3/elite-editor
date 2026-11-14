@@ -17,6 +17,15 @@ jobs:
       - run: npm run setup
       - run: npm test
       - run: npm run test:ui
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: 1.2.18
+      - run: bun install --frozen-lockfile
+        working-directory: vendor/opencut-classic
+      - run: node scripts/build-content.mjs
+        working-directory: vendor/opencut-classic/apps/web
+      - name: Build browser editor for GitHub Pages
+        run: node scripts/build-browser-editor.mjs
   editor-types:
     runs-on: ubuntu-latest
     steps:
