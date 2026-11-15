@@ -17,6 +17,7 @@ import type {
 	CaptionChunk,
 	TranscriptionLanguage,
 	TranscriptionProgress,
+	TranscriptionModelId,
 } from "@/transcription/types";
 import { transcriptionService } from "@/services/transcription/service";
 import { decodeAudioToFloat32 } from "@/media/audio";
@@ -83,9 +84,9 @@ function processingReducer(
 }
 /* eslint-enable opencut/prefer-object-params */
 
-export function Captions() {
+export function Captions({initialLanguage="auto",modelId}:{initialLanguage?:TranscriptionLanguage;modelId?:TranscriptionModelId}={}) {
 	const [selectedLanguage, setSelectedLanguage] =
-		useState<TranscriptionLanguage>("auto");
+		useState<TranscriptionLanguage>(initialLanguage);
 	const [processing, dispatch] = useReducer(processingReducer, IDLE_STATE);
 	const containerRef = useRef<HTMLDivElement>(null);
 	const fileInputRef = useRef<HTMLInputElement>(null);
@@ -134,6 +135,7 @@ export function Captions() {
 
 			const result = await transcriptionService.transcribe({
 				audioData: samples,
+				modelId,
 				language: selectedLanguage === "auto" ? undefined : selectedLanguage,
 				onProgress: handleProgress,
 			});

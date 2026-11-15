@@ -19,6 +19,8 @@ type Sound = {
 	author?: string;
 };
 export function EliteAudio() {
+	const [collection,setCollection]=useState('all');
+	const [loading,setLoading]=useState(true);
 	const [category, setCategory] = useState("all"),
 		[sort, setSort] = useState("name"),
 		[favorites, setFavorites] = useState<string[]>([]),
@@ -64,7 +66,7 @@ export function EliteAudio() {
 			})
 			.catch((e) => {
 				if (e.name !== "AbortError") setError(e.message);
-			});
+			}).finally(()=>{if(!controller.signal.aborted)setLoading(false);});
 		return () => controller.abort();
 	}, []);
 	async function add(sound: Sound) {
@@ -130,6 +132,7 @@ export function EliteAudio() {
 		.filter(
 			(s) =>
 				(kind === "all" || s.kind === kind) &&
+				(collection === "all" || s.pack === collection) &&
 				(category === "all" || s.category === category) &&
 				(!onlyFavorites || favorites.includes(s.id)) &&
 				[s.name, s.category, s.pack, s.author]
@@ -147,7 +150,9 @@ export function EliteAudio() {
 		);
 	return (
 		<div className="flex h-full flex-col gap-3 overflow-auto p-4 text-sm">
-			<h2 className="font-semibold">Audio preinstalado · {sounds.length}</h2>
+			<h2 className="font-semibold text-lg">Música y efectos de sonido · {sounds.length}</h2>
+			<p className="text-xs text-muted-foreground">{sounds.filter(s=>s.kind==='music').length} pistas musicales y jingles · {sounds.filter(s=>s.kind==='sound').length} efectos. Escucha antes de añadir a la timeline.</p>
+			<label className="text-xs">Colección<select aria-label="Colección de audio" className="mt-1 w-full rounded border bg-background p-2" value={collection} onChange={e=>setCollection(e.target.value)}><option value="all">Todas las colecciones</option>{[...new Set(sounds.map(s=>s.pack).filter((p):p is string=>!!p))].map(p=><option key={p} value={p}>{{'elite-sfx':'Elite · efectos para creadores','kenney-interface-sounds':'Kenney · interfaz y clicks','kenney-music-jingles':'Kenney · jingles musicales','music-shadow':'Shadow · música ambiental'}[p]||p}</option>)}</select></label>
 			<div className="flex flex-wrap gap-2 text-xs">
 				<select
 					aria-label="Categoría de audio"
@@ -214,6 +219,7 @@ export function EliteAudio() {
 				<div>
 					<p className="truncate text-xs">{preview.name}</p>
 					<audio
+						onError={()=>setError('No se pudo reproducir este audio. Prueba otro recurso o recarga la biblioteca.')}
 						key={preview.id}
 						controls
 						autoPlay
@@ -228,7 +234,7 @@ export function EliteAudio() {
 				</p>
 			) : null}
 			{filtered.map((sound) => (
-				<article key={sound.id} className="rounded border p-2">
+				<article key={sound.id} aria-label={sound.name} className="rounded border p-2">
 					<p className="truncate text-xs" title={sound.name}>
 						{sound.name}
 					</p>
@@ -254,17 +260,18 @@ export function EliteAudio() {
 						<Button
 							variant="outline"
 							size="sm"
+							aria-label={'Escuchar: '+sound.name}
 							onClick={() => setPreview(sound)}
 						>
 							Escuchar
 						</Button>
-						<Button size="sm" disabled={busy} onClick={() => void add(sound)}>
+						<Button size="sm" aria-label={'Añadir audio: '+sound.name} disabled={busy} onClick={() => void add(sound)}>
 							Añadir
 						</Button>
 					</div>
 				</article>
 			))}
-			{!filtered.length ? (
+			{loading?<p role="status">Cargando biblioteca de audio…</p>:!filtered.length ? (
 				<p className="text-xs text-muted-foreground">
 					No hay recursos con estos filtros. Prueba otra categoría o quita
 					Favoritos.

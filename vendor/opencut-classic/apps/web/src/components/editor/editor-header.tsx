@@ -26,6 +26,7 @@ import { ShortcutsDialog } from "@/actions/components/shortcuts-dialog";
 import Image from "next/image";
 import { cn } from "@/utils/ui";
 import {useAssetsPanelStore} from "./panels/assets/assets-panel-store";
+import {usePropertiesStore} from './panels/properties/stores/properties-store';
 
 export function EditorHeader() {
 	return (
@@ -42,6 +43,8 @@ export function EditorHeader() {
 				</span>
 			</div>
 			<nav className="flex items-center gap-2">
+				<Button variant="default" onClick={()=>{usePropertiesStore.getState().setActiveTab({elementType:'video',tabId:'beauty'});usePropertiesStore.getState().setActiveTab({elementType:'image',tabId:'beauty'});useAssetsPanelStore.getState().setActiveTab('beauty');}}>Retoque visual</Button>
+				<Button variant="outline" onClick={()=>useAssetsPanelStore.getState().setActiveTab('sounds')}>Audio</Button>
 				<Button
 					variant="outline"
 					className="xeno-pill"

@@ -20,11 +20,13 @@ import { EffectsView } from "@/effects/components/assets-view";
 import { EliteMotion } from "./views/elite-motion";
 import { EliteAudio } from "./views/elite-audio";
 import { EliteZoom } from "./views/elite-zoom";
+import { EliteBeauty } from "./views/elite-beauty";
 
 export function AssetsPanel() {
 	const { activeTab } = useAssetsPanelStore();
 
 	const viewMap: Record<Tab, React.ReactNode> = {
+		beauty: <EliteBeauty />,
 		zoom: <EliteZoom />,
 		assistant: <NachoAssistant />,
 		generate: <NachoGenerate />,

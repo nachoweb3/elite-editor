@@ -21,6 +21,7 @@ import {
 import { HugeiconsIcon, type IconSvgElement } from "@hugeicons/react";
 
 export const TAB_KEYS = [
+	"beauty",
 	"zoom",
 	"background",
 	"assistant",
@@ -47,6 +48,7 @@ const createHugeiconsIcon =
 	);
 
 export const tabs = {
+	beauty: {icon:createHugeiconsIcon({icon:MagicWand05Icon}),label:"Retoque visual"},
 	zoom: {
 		icon: createHugeiconsIcon({ icon: ZoomInAreaIcon }),
 		label: "Zoom ◆",
