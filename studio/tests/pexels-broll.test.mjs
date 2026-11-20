@@ -26,3 +26,11 @@ test('director suggestions respect a small count, spacing and distinct queries',
   const output=brollCandidates(project,requests);
   assert.deepEqual(output.map(item=>item.outputTime),[5,25,45,65]);
 });
+
+test('an editing tutorial can find illustrations for editing and software without a local language model',()=>{
+  const project={clips:[{start:0,end:60,enabled:true}],transcript:[
+    {start:3,end:7,text:'Este editor de vídeo mantiene el montaje editable'},
+    {start:26,end:31,text:'Ahora se ven tres subagentes procesando en paralelo'},
+  ]};
+  assert.deepEqual(brollCandidates(project).map(item=>item.query),['video editing studio','software developer coding']);
+});
