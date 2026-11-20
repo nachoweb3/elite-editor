@@ -1,3 +1,5 @@
+import type {SourcePart} from './types';
+
 export type SourceClip={id:string;sourceId?:string;start:number;end:number;enabled:boolean};
 export type Range={start:number;end:number};
 /** Minutos:segundos para mostrar tiempos de montaje. */
@@ -16,6 +18,23 @@ export function removedRanges(clips:SourceClip[],sourceId:string,duration:number
 }
 export function sourceAtMontage(clips:SourceClip[],time:number){let offset=0;for(const c of clips){const length=c.end-c.start;if(time<offset+length)return {sourceId:c.sourceId,time:c.start+Math.max(0,time-offset)};offset+=length;}const last=clips.at(-1);return last?{sourceId:last.sourceId,time:last.end}:null;}
 export function montageAtSource(clips:SourceClip[],sourceId:string,time:number){let offset=0,nearest=0,distance=Infinity;for(const c of clips){if((c.sourceId||sourceId)===sourceId){if(time>=c.start&&time<=c.end)return offset+time-c.start;const d=Math.min(Math.abs(time-c.start),Math.abs(time-c.end));if(d<distance){distance=d;nearest=offset+(time<c.start?0:c.end-c.start);}}offset+=c.end-c.start;}return nearest;}
+export function montagePartMarkers(clips:SourceClip[],projectId:string,partsBySource:ReadonlyMap<string,SourcePart[]>){
+ const markers:{key:string;index:number;time:number;name:string}[]=[];
+ let previousPart:SourcePart|undefined,offset=0;
+ for(const clip of clips){
+  if(!clip.enabled)continue;
+  const parts=partsBySource.get(clip.sourceId||projectId);
+  if(!parts)previousPart=undefined;
+  else for(const [index,part] of parts.entries()){
+   const start=Math.max(clip.start,part.start),end=Math.min(clip.end,part.end);
+   if(end-start<1e-6)continue;
+   if(part!==previousPart)markers.push({key:`${clip.id}:${index}`,index:index+1,time:offset+start-clip.start,name:part.name});
+   previousPart=part;
+  }
+  offset+=clip.end-clip.start;
+ }
+ return markers;
+}
 export function restoreRange<T extends SourceClip>(clips:T[],sourceId:string,duration:number,range:Range,makeClip:(r:Range)=>T):T[]{
  const missing=removedRanges(clips,sourceId,duration).flatMap(g=>{const start=Math.max(range.start,g.start),end=Math.min(range.end,g.end);return end-start>=1/30?[{start,end}]:[];});
  const result=[...clips];for(const gap of missing){const index=result.findIndex(c=>(c.sourceId||sourceId)===sourceId&&c.start>=gap.end);result.splice(index<0?result.length:index,0,makeClip(gap));}return result;

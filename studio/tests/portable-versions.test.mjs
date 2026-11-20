@@ -101,7 +101,8 @@ test('el paquete portable lleva el montaje, el vídeo y el audio usado, sin rend
 });
 
 test('importar el paquete crea un proyecto nuevo con sus medios y el audio remapeado',async()=>{
-  const project=await makeProject();
+  const sourceParts=[{name:'01-intro.mp4',start:0,end:5},{name:'02-demo.mp4',start:5,end:10}];
+  const project=await makeProject({sourceParts});
   const pack=await packageProject(project.id);
   const {project:imported,audio}=await importPackage(pack.path,{id:OWNER});
   assert.notEqual(imported.id,project.id);
@@ -110,6 +111,7 @@ test('importar el paquete crea un proyecto nuevo con sus medios y el audio remap
   assert.equal(imported.revision,0);
   assert.equal(imported.clips.length,2);
   assert.deepEqual(imported.clips.map(clip=>[clip.start,clip.end]),[[0,6],[6.5,10]]);
+  assert.deepEqual(imported.sourceParts,sourceParts);
   assert.ok(imported.clips.every(clip=>clip.sourceId===imported.id));
   assert.notEqual(imported.source,originalSource);
   assert.equal(path.dirname(imported.source),INPUT_ROOT);

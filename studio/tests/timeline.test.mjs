@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {removedRanges,restoreRange,sourceAtMontage,montageAtSource} from '../web/src/timeline.ts';
+import {removedRanges,restoreRange,sourceAtMontage,montageAtSource,montagePartMarkers} from '../web/src/timeline.ts';
 import {indexMontageTranscript,montageChapters,chapterText} from '../web/src/transcript-index.ts';
 const clip=(id,start,end,sourceId='original',enabled=true)=>({id,start,end,sourceId,enabled});
 test('review detects only missing original intervals despite reordered, duplicate and foreign clips',()=>{
@@ -19,6 +19,13 @@ test('monitor maps source and montage time across removed pauses and multiple so
  assert.equal(montageAtSource(clips,'original',20),5);
  assert.deepEqual(sourceAtMontage(clips,11),{sourceId:'other',time:1});
  assert.equal(sourceAtMontage([],0),null);
+});
+test('part markers follow retained and reordered source clips without duplicating contiguous sections',()=>{
+ const parts=new Map([['original',[{name:'01.mp4',start:0,end:3},{name:'02.mp4',start:3,end:8},{name:'03.mp4',start:8,end:14}]]]);
+ const clips=[clip('c',10,11),clip('a',1,2),clip('a2',2,3),clip('b',4,6),clip('d',3,7,'elsewhere',false),clip('f',1,3,'elsewhere'),clip('b2',6,10)];
+ const marks=montagePartMarkers(clips,'original',parts);
+ assert.deepEqual(marks.map(({index,time,name})=>[index,time,name]),[[3,0,'03.mp4'],[1,1,'01.mp4'],[2,3,'02.mp4'],[2,7,'02.mp4'],[3,9,'03.mp4']]);
+ assert.deepEqual(montagePartMarkers(clips,'original',new Map()),[]);
 });
 test('montage transcript ignores trimmed words and follows reordered clips from multiple sources',()=>{
  const montage=[clip('m',2,6,'other'),clip('n',11,15),clip('disabled',2,5,'original',false)];

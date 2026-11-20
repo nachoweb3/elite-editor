@@ -64,7 +64,15 @@ export async function run(command,args,{cwd=ROOT,log,timeout=24*3600*1000,signal
     child.on('error',e=>finish(reject,e));child.on('close',code=>{if(code===0)finish(resolve,{out,err});else finish(reject,new Error(`${path.basename(command)} (${code}): ${err.slice(-6000)}`));});
   });
 }
-export async function probe(file){const {out}=await run('ffprobe',['-v','error','-show_format','-show_streams','-of','json',file]);const p=JSON.parse(out),v=p.streams.find(s=>s.codec_type==='video');if(!v)throw new Error('El archivo no contiene vídeo');const duration=Number(p.format.duration||v.duration);if(!Number.isFinite(duration)||duration<=0)throw new Error('Duración de vídeo inválida');return {duration,width:v.width,height:v.height,fps:v.avg_frame_rate,audio:p.streams.some(s=>s.codec_type==='audio'),codec:v.codec_name};}
+export async function probe(file){
+  const {out}=await run('ffprobe',['-v','error','-show_format','-show_streams','-of','json',file]);
+  const p=JSON.parse(out),v=p.streams.find(s=>s.codec_type==='video');
+  if(!v)throw new Error('El archivo no contiene vídeo');
+  const duration=Number(p.format.duration||v.duration);
+  if(!Number.isFinite(duration)||duration<=0)throw new Error('Duración de vídeo inválida');
+  const rotation=Number(v.side_data_list?.find(data=>data.rotation!==undefined)?.rotation??v.tags?.rotate??0);
+  return {duration,width:v.width,height:v.height,fps:v.avg_frame_rate,audio:p.streams.some(s=>s.codec_type==='audio'),codec:v.codec_name,rotation:Number.isFinite(rotation)?rotation:0};
+}
 export const MOTIONS=['none','dolly-in','dolly-out','zoom-crash','pan-left','pan-right','tilt-up','ken-burns'];
 export const defaults={...faceDefaults,...sourceDefaults,beautyAuto:true,style:'EDUCATIONAL',subtitle:'Tutorial',profile:'reels',fit:'contain',cropX:0.5,cropY:0.5,language:'es',subtitles:true,cleanAudio:true,exposure:0,contrast:1,saturation:1,transition:0,soundEffects:false,musicId:null,musicVolume:0.08,zoom:1,title:'',subtitlePosition:'bottom',encoder:'auto'};
 export function validateSettings(s){const result={...defaults,...s,...faceSettings(s),...sourceSettings(s)};if(typeof result.beautyAuto!=='boolean')throw new Error('Belleza automática inválida');
@@ -74,7 +82,22 @@ export function validateSettings(s){const result={...defaults,...s,...faceSettin
   if(typeof result.title!=='string'||result.title.length>120)throw new Error('Título demasiado largo');
   if(result.musicId!==null&&!/^[a-f0-9-]{36}$/.test(result.musicId))throw new Error('Recurso de música inválido');return Object.fromEntries(Object.keys(defaults).map(k=>[k,result[k]]));}
 export function validateTimeline(clips,duration){if(!Array.isArray(clips)||!clips.length||clips.length>5000)throw new Error('Se necesitan entre 1 y 5000 fragmentos');let previous=0;return clips.map((c,i)=>{if(!Number.isFinite(c.start)||!Number.isFinite(c.end)||c.start<previous-0.001||c.start<0||c.end>duration+0.001||c.end-c.start<0.05||typeof c.enabled!=='boolean')throw new Error(`Fragmento ${i+1} inválido: revisa tiempos, orden y duración`);previous=c.end;return {id:String(i),start:c.start,end:c.end,enabled:c.enabled,reason:String(c.reason||'Manual').slice(0,500)};});}
-export async function importVideo(source,name,ownerId=null){
+export function normalizeSourceParts(parts,duration){
+  if(!Array.isArray(parts)||parts.length<2||parts.length>12||!Number.isFinite(duration)||duration<=0)return undefined;
+  const markers=[];
+  let previousEnd=0;
+  for(const part of parts){
+    if(!part||typeof part.name!=='string'||!Number.isFinite(part.start)||!Number.isFinite(part.end)||Math.abs(part.start-previousEnd)>.001)return undefined;
+    const start=previousEnd,end=Math.min(duration,part.end);
+    if(end<=start)return undefined;
+    const name=path.win32.basename(part.name).replace(/[\u0000-\u001f\u007f\u202a-\u202e\u2066-\u2069]/g,'').trim().slice(0,120).toWellFormed();
+    markers.push({name:name||`Parte ${markers.length+1}`,start,end});
+    previousEnd=end;
+  }
+  markers.at(-1).end=duration;
+  return markers;
+}
+export async function importVideo(source,name,ownerId=null,sourceParts){
   const id=randomUUID(),dir=projectDir(id);
   const dest=path.join(INPUT_ROOT,'raw_videos',id+path.extname(name).toLowerCase());
   await fs.mkdir(path.dirname(dest),{recursive:true});
@@ -83,7 +106,7 @@ export async function importVideo(source,name,ownerId=null){
   try{
     await fs.copyFile(source,dest,fs.constants.COPYFILE_EXCL);
     const media=await probe(dest);
-    return await save({id,name:path.basename(name),ownerId,createdAt:new Date().toISOString(),source:dest,media,settings:{...defaults},clips:[{id:'0',start:0,end:media.duration,enabled:true,reason:'Original completo'}],transcript:[],analysis:null,reviewed:false,revision:0,artifacts:{},jobs:[]});
+    return await save({id,name:path.basename(name),ownerId,createdAt:new Date().toISOString(),source:dest,media,sourceParts:normalizeSourceParts(sourceParts,media.duration),settings:{...defaults},clips:[{id:'0',start:0,end:media.duration,enabled:true,reason:'Original completo'}],transcript:[],analysis:null,reviewed:false,revision:0,artifacts:{},jobs:[]});
   }catch(error){
     if(error.code!=='EEXIST')await fs.unlink(dest).catch(()=>{});
     await fs.rmdir(dir).catch(()=>{});

@@ -53,7 +53,7 @@ export function PartsDialog({initialFiles,numbered,automatic,onClose,onCombine}:
     <button type="button" aria-label={`Subir ${file.name}`} disabled={busy||index===0} onClick={()=>move(index,index-1)}>↑</button>
     <button type="button" aria-label={`Bajar ${file.name}`} disabled={busy||index===files.length-1} onClick={()=>move(index,index+1)}>↓</button>
    </li>)}</ol>
-   <p>Se crea un proyecto con todas las partes en este orden. Los archivos originales se conservan.</p>
+   <p>La línea de tiempo conserva una marca por cada parte. Los archivos originales se conservan.</p>
    {busy?<p role="status">Uniendo las partes. Los formatos distintos requieren recodificación y pueden tardar.</p>:null}
    {error?<p role="alert" className="hub-error">{error}</p>:null}
    <button type="submit" className="nle-primary" disabled={busy||!name.trim()}>{busy?'Preparando…':automatic?'Unir y montar':'Unir y abrir en la línea de tiempo'}</button>

@@ -20,7 +20,7 @@ export function AuthGate({children}:{children:ReactNode}){
       .catch(error=>setAuth({loading:false,authenticated:false,error:error.message}));
   };
   useEffect(load,[]);
-  if(auth.loading)return <div className="auth-loading"><span className="auth-mark">N</span><p>Cargando tu estudio…</p></div>;
+  if(auth.loading)return <div className="auth-loading"><span className="auth-mark" aria-hidden="true">E</span><p>Cargando tu estudio…</p></div>;
   if(!auth.authenticated)return <AuthScreen registrationOpen={auth.registrationOpen!==false} firstRun={!!auth.firstRun} error={auth.error} onAuthenticated={value=>setAuth({...value,loading:false,authenticated:true})} onRetry={load}/>;
   return <>{children}<AccountBar user={auth.user!} token={auth.token||''}/></>;
 }
@@ -38,7 +38,7 @@ function AuthScreen({registrationOpen,firstRun,error,onAuthenticated,onRetry}:{r
     finally{setBusy(false);}
   }
   return <main className="auth-screen"><section className="auth-card">
-    <header><span className="auth-mark">N</span><div><p className="auth-kicker">NACHO WEB3 · ESTUDIO PRIVADO</p><h1>{mode==='register'?(firstRun?'Crea tu estudio':'Crea otra cuenta'):'Vuelve a tu estudio'}</h1><p>{mode==='register'?'Una cuenta mantiene tus proyectos separados del resto.':'Tus proyectos y descargas siguen en este equipo.'}</p></div></header>
+    <header><span className="auth-mark" aria-hidden="true">E</span><div><p className="auth-kicker">ELITE EDITOR · ESTUDIO LOCAL</p><h1>{mode==='register'?(firstRun?'Crea tu estudio':'Crea otra cuenta'):'Vuelve a tu estudio'}</h1><p>{mode==='register'?'Una cuenta mantiene tus proyectos separados del resto.':'Tus proyectos y descargas siguen en este equipo.'}</p></div></header>
     {firstRun?<p className="auth-note">Esta es la primera cuenta: los proyectos que ya existen en este equipo se asignarán a ella. Después podrás crear cuentas separadas.</p>:null}
     <form onSubmit={submit}>
       {mode==='register'?<label>Nombre<input value={name} onChange={event=>setName(event.target.value)} autoComplete="name" maxLength={80} required placeholder="Cómo quieres que te llamemos"/></label>:null}

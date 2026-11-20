@@ -2,24 +2,38 @@ import {useState,type Ref} from 'react';
 import {CutReview} from './CutReview';
 import {DialogHeader,Modal} from './Modal';
 import {clock} from './timeline';
-import type {Project} from './types';
+import type {AutoFormat,AutoOptions,Project} from './types';
+import './workflow.css';
+export type {AutoOptions} from './types';
 
-export type AutoOptions={
- subtitles:boolean;
- subtitlePosition:string;
- subtitle:string;
- memes:boolean;
- music:boolean;
- beauty:boolean;
-};
+const recipes:{name:string;description:string;options:AutoOptions}[]=[
+ {
+  name:'Pódcast limpio',description:'Conserva el encuadre y centra la edición en la voz.',
+  options:{targetFormat:'auto',subtitles:true,subtitlePosition:'bottom',subtitle:'Cinematic',memes:false,broll:false,music:false,beauty:false},
+ },
+ {
+  name:'Tutorial',description:'Montaje horizontal con subtítulos y planos de apoyo.',
+  options:{targetFormat:'horizontal',subtitles:true,subtitlePosition:'bottom',subtitle:'Tutorial',memes:false,broll:true,music:false,beauty:false},
+ },
+ {
+  name:'Short dinámico',description:'Salida vertical con subtítulos, recursos y música.',
+  options:{targetFormat:'vertical',subtitles:true,subtitlePosition:'bottom',subtitle:'Viral',memes:true,broll:true,music:true,beauty:false},
+ },
+];
 
 export function automaticPreferences(settings?:Project['settings']):AutoOptions{
- const read=(key:string)=>localStorage.getItem('nacho:auto-'+key);
+ const read=(key:string)=>{try{return localStorage.getItem('nacho:auto-'+key);}catch{return null;}};
+ const savedFormat=read('targetFormat');
+ const targetFormat=settings
+  ? settings.profile.startsWith('youtube')?'horizontal':'vertical'
+  : savedFormat==='vertical'||savedFormat==='horizontal'?savedFormat:'auto';
  return {
+  targetFormat,
   subtitles:settings?.subtitles??(read('subtitles')!=='false'),
   subtitlePosition:settings?.subtitlePosition||read('subpos')||'top',
   subtitle:settings?.subtitle||read('substyle')||'Cinematic',
   memes:read('memes')!=='false',
+  broll:read('broll')!=='false',
   music:read('music')!=='false',
   beauty:read('beauty')!=='false',
  };
@@ -64,14 +78,14 @@ export function Workflow({
  const resources=(direction?.media||[]).filter(item=>item.status!=='rejected'&&item.outputTime!==undefined);
 
  const [options,setOptions]=useState(()=>automaticPreferences(project?.settings));
- const {subtitles,subtitlePosition:subtitlePos,subtitle:subtitleStyle,memes,music,beauty}=options;
+ const {subtitles,subtitlePosition:subtitlePos,subtitle:subtitleStyle,memes,broll,music,beauty,targetFormat}=options;
  function showOptions(mode:'import'|'project'){
   setOptions(automaticPreferences(mode==='project'?project?.settings:undefined));
   setOptionsFor(mode);
  }
 
  function triggerAuto(finish:boolean){
-  const prefs={subtitles,subpos:subtitlePos,substyle:subtitleStyle,memes,music,beauty};
+  const prefs={subtitles,subpos:subtitlePos,substyle:subtitleStyle,memes,broll,music,beauty,targetFormat};
   try{for(const [key,value] of Object.entries(prefs))localStorage.setItem('nacho:auto-'+key,String(value));}catch{}
   setOptionsFor(null);
   if(optionsFor==='import')onImport(options);
@@ -111,6 +125,22 @@ export function Workflow({
    <DialogHeader titleId="auto-options-title" kicker="MONTAJE AUTOMÁTICO" title={optionsFor==='import'?'Importar y montar':'Editar automáticamente'} onClose={()=>setOptionsFor(null)}
     description="El montaje queda editable en la línea de tiempo. En las grabaciones con audio, el estudio usa Whisper para localizar y transcribir la voz."/>
 
+   <fieldset className="workflow-recipes">
+    <legend>Recetas de montaje</legend>
+    <div className="workflow-recipe-grid">{recipes.map(recipe=><button
+     key={recipe.name} type="button" disabled={busy}
+     aria-pressed={Object.entries(recipe.options).every(([key,value])=>options[key as keyof AutoOptions]===value)}
+     onClick={()=>setOptions({...recipe.options})}
+    ><strong>{recipe.name}</strong><small>{recipe.description}</small></button>)}</div>
+   </fieldset>
+   <label className="workflow-format">
+    <span>Formato de salida</span>
+    <select value={targetFormat} disabled={busy} onChange={event=>setOptions({...options,targetFormat:event.target.value as AutoFormat})}>
+     <option value="auto">Automático · según la grabación</option>
+     <option value="vertical">Vertical 9:16 · 1080 × 1920</option>
+     <option value="horizontal">Horizontal 16:9 · 1920 × 1080</option>
+    </select>
+   </label>
    <div className="workflow-options-grid">
     <div className={`workflow-opt-pill ${subtitles?'active':''}`}>
      <label className="workflow-opt-label">
@@ -134,9 +164,17 @@ export function Workflow({
     <div className={`workflow-opt-pill ${memes?'active':''}`}>
      <label className="workflow-opt-label">
       <input type="checkbox" checked={memes} onChange={event=>setOptions({...options,memes:event.target.checked})}/>
-      <span>Memes y recursos IA</span>
+      <span>Memes contextuales</span>
      </label>
-     <small>{memes?'Inserción inteligente por contexto':'Montaje directo sin memes'}</small>
+     <small>{memes?'Inserciones puntuales según el contexto':'Sin memes'}</small>
+    </div>
+
+    <div className={`workflow-opt-pill ${broll?'active':''}`}>
+     <label className="workflow-opt-label">
+      <input type="checkbox" checked={broll} onChange={event=>setOptions({...options,broll:event.target.checked})}/>
+      <span>Vídeo de apoyo de Pexels</span>
+     </label>
+     <small>Disponible con una clave de <a href="https://www.pexels.com" target="_blank" rel="noreferrer">Pexels</a> configurada.</small>
     </div>
 
     <div className={`workflow-opt-pill ${music?'active':''}`}>

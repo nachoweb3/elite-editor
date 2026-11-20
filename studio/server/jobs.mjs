@@ -10,6 +10,7 @@ import {analyze} from './engine.mjs';
 import {render} from './render-pipeline.mjs';
 import {exportToEditor} from './editor-bridge.mjs';
 import {autopilot} from './autopilot.mjs';
+import {automationOptions} from './automation-options.mjs';
 import {planStickmen} from './stickman.mjs';
 import {renderShorts} from './shorts.mjs';
 import {assertQuota,recordUsage} from './usage.mjs';
@@ -52,6 +53,8 @@ export async function cancelJob(id,jobId){
 }
 export async function enqueue(id,type,options={},user=null){
   const p=await load(id);
+  const automatic=type==='auto-review'||type==='autopilot';
+  if(automatic)options=automationOptions(options);
   if(type==='render'&&options?.preflightRevision!==undefined&&options.preflightRevision!==p.revision){
     const error=new Error('El montaje cambió después de la comprobación. Vuelve a comprobarlo antes de exportar.');
     error.status=409;
@@ -76,7 +79,7 @@ export async function enqueue(id,type,options={},user=null){
     if(typeof options.music==='boolean'&&!options.music)p.settings.musicId=null;
     if(typeof options.beauty==='boolean')p.settings.beautyAuto=options.beauty;
   }
-  const job={id:randomUUID(),type,status:'queued',message:'En cola',createdAt:new Date().toISOString(),...(RENDER_JOBS.has(type)?{minutes}:{})};
+  const job={id:randomUUID(),type,status:'queued',message:'En cola',createdAt:new Date().toISOString(),...(RENDER_JOBS.has(type)?{minutes}:{}),...(automatic?{options}:{})};
   if(approveOnExport)p.reviewed=true;
   p.jobs.push(job);p.jobs=p.jobs.slice(-50);await save(p);
   pending.push({id,jobId:job.id,type,options,user,minutes});void drain();return job;

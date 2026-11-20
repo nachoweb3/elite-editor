@@ -1,7 +1,7 @@
 import fs from 'node:fs/promises';
 import path from 'node:path';
 import {randomUUID} from 'node:crypto';
-import {ASSETS_FILE,CACHE_ROOT,INPUT_ROOT,load,save,changeAssets,json,projectDir,probe,readAssets,validateSettings} from './core.mjs';
+import {ASSETS_FILE,CACHE_ROOT,INPUT_ROOT,load,save,changeAssets,json,projectDir,probe,readAssets,validateSettings,normalizeSourceParts} from './core.mjs';
 import {zipDirectory,extractZip} from './zip.mjs';
 
 const MAX_BYTES=1.5*1024**3;
@@ -253,6 +253,7 @@ export async function importPackage(zipPath,user){
       ownerId:user.id,
       blank:raw.blank===true&&!source,
       source,media,settings,clips,
+      sourceParts:normalizeSourceParts(raw.sourceParts,media.duration),
       transcript:Array.isArray(raw.transcript)?raw.transcript:[],
       automatic:portableDirection(raw.automatic),
       audioTracks:tracks.map(track=>({...track,assetId:remap.get(track.assetId)})),

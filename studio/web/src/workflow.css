@@ -1,0 +1,72 @@
+.nle .workflow-recipes {
+ display: grid;
+ gap: 8px;
+ border: 0;
+ margin: 0 0 14px;
+ padding: 0;
+}
+.workflow-recipes legend {
+ margin-bottom: 8px;
+ color: var(--studio-ink, #eef1e7);
+ font-size: 13px;
+ font-weight: 600;
+}
+.workflow-recipe-grid {
+ display: grid;
+ grid-template-columns: repeat(auto-fit, minmax(min(100%, 140px), 1fr));
+ gap: 8px;
+}
+.workflow-recipe-grid button {
+ display: grid;
+ gap: 5px;
+ padding: 10px;
+ border: 1px solid var(--studio-line, #373b37);
+ border-radius: 6px;
+ background: var(--studio-surface, #17191a);
+ color: var(--studio-ink, #eef1e7);
+ font-size: 13px;
+ text-align: left;
+}
+.workflow-recipe-grid small {
+ color: var(--studio-muted, #afb6af);
+ line-height: 1.35;
+}
+.workflow-recipe-grid button[aria-pressed="true"],
+.workflow-recipe-grid button:focus-visible {
+ border-color: var(--studio-accent, #d2fa52);
+}
+.workflow-format {
+ display: flex;
+ flex-wrap: wrap;
+ align-items: center;
+ justify-content: space-between;
+ gap: 8px;
+ margin: 0 0 14px;
+ color: var(--studio-ink, #eef1e7);
+ font-size: 13px;
+}
+.workflow-format select {
+ max-width: 100%;
+ padding: 7px 9px;
+ color: var(--studio-ink, #eef1e7);
+ background: var(--studio-surface, #17191a);
+ border: 1px solid var(--studio-line, #373b37);
+ border-radius: 5px;
+}
+.nle-ruler .nle-part-marker {
+ position: absolute;
+ bottom: 1px;
+ z-index: 3;
+ min-width: 16px;
+ height: 16px;
+ padding: 0 3px;
+ color: #101510;
+ background: var(--studio-accent, #d2fa52);
+ border: 1px solid #141b08;
+ border-radius: 3px;
+ font: 700 9px/1 system-ui, sans-serif;
+}
+.nle-ruler .nle-part-marker:hover,
+.nle-ruler .nle-part-marker:focus-visible {
+ background: var(--studio-ink, #eef1e7);
+}

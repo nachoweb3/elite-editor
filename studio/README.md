@@ -22,6 +22,8 @@ Pulsa **Importar y montar → Elegir vídeo y montar**. Selecciona de 2 a 12 arc
 
 Si los flujos son compatibles, el estudio los copia sin recodificar. Si difieren, usa el encuadre de la primera parte. Los originales se conservan. Si un archivo contiene varias pistas de audio, sitúa la que quieres usar en primer lugar.
 
+Las marcas numeradas de la línea de tiempo te llevan a las partes. En **Editar automáticamente** puedes partir de una receta, cambiar sus ajustes y elegir 16:9, 9:16 u orientación automática.
+
 ## Preparar Whisper para grabaciones con audio
 
 La edición manual y el render funcionan con FFmpeg. El montaje automático de grabaciones con audio necesita Whisper. Instala Python 3.11 de 64 bits y ejecuta estos pasos desde la carpeta del estudio después de la primera ejecución:
@@ -34,6 +36,12 @@ npm run doctor
 ```
 
 El modelo `tiny` se descarga al ejecutar ese comando y después transcribe en tu equipo. El retoque facial usa el modelo Face Landmarker de MediaPipe, que se instala aparte en `models/face_landmarker.task`.
+
+## Añadir vídeo de apoyo de Pexels
+
+Consigue una clave en [Pexels](https://www.pexels.com/api/) y guárdala como `PEXELS_API_KEY` en un archivo `.env.local` dentro de la carpeta del estudio. Activa **Vídeo de apoyo de Pexels** en los ajustes de montaje. Puedes usar este control de forma independiente de los memes y de Ollama.
+
+El estudio busca términos visuales del montaje, prioriza vídeos y puede usar una foto cuando no encuentra un vídeo pertinente. Conserva tu voz. Puedes revisar las inserciones y sus créditos en el panel de recursos.
 
 ## Guardar y publicar
 

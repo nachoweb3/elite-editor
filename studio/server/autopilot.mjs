@@ -8,6 +8,9 @@ import {sanitizeTranscript,fillerIntervals,removeIntervals} from './dialogue-cle
 import {planMemes} from './meme-plan.mjs';
 import {planDirection} from './director.mjs';
 import {decorate} from './decorate.mjs';
+import {planBroll} from './broll.mjs';
+import {pexelsStatus} from './pexels.mjs';
+import {resolveAutomationProfile} from './automation-options.mjs';
 
 export function protectSpeech(clips,transcript,duration){
   if(!transcript.length)return clips.filter(c=>c.enabled);
@@ -22,6 +25,7 @@ export function protectSpeech(clips,transcript,duration){
 
 export async function autopilot(id,report,{reviewOnly=false,signal,options={}}={}){
   let p=await load(id);
+  const profile=resolveAutomationProfile(p.media,options.targetFormat);
   if(p.media.audio){
     const {model}=await config();
     try{await fs.access(path.join(ROOT,'models',model,'model.bin'));}
@@ -35,8 +39,9 @@ export async function autopilot(id,report,{reviewOnly=false,signal,options={}}={
   const subTemplate=options.subtitle||p.settings.subtitle||'Cinematic';
   const useMemes=typeof options.memes==='boolean'?options.memes:(options.autoMemes!==false);
   const useMusic=typeof options.music==='boolean'?options.music:true;
+  const useBroll=options.broll!==false;
 
-  p.settings={...defaults,...face,beautyAuto:useMaxBeauty,language:'es',profile:p.media.width>=p.media.height?'youtube':'reels',fit:'contain',subtitle:subTemplate,subtitlePosition:subPosition,style:'CINEMATIC',transition:0,cleanAudio:p.media.audio,subtitles:useSubtitles};
+  p.settings={...defaults,...face,beautyAuto:useMaxBeauty,language:'es',profile,fit:'contain',subtitle:subTemplate,subtitlePosition:subPosition,style:'CINEMATIC',transition:0,cleanAudio:p.media.audio,subtitles:useSubtitles};
   p.automatic={status:'working',decisions:[],startedAt:new Date().toISOString()};await save(p);
   report('[agente] Modo autónomo: analizando voz, silencios, imagen y discurso');
   if(useMaxBeauty)report('[agente] Belleza automática al máximo: piel, ojeras, mirada, lifting y rasgos');
@@ -49,7 +54,7 @@ export async function autopilot(id,report,{reviewOnly=false,signal,options={}}={
   const length=p.clips.reduce((a,c)=>a+c.end-c.start,0);
   const brightness=(p.analysis.scenes||[]).map(s=>s.brightness).filter(Number.isFinite);
   if(brightness.length){const mean=brightness.reduce((a,b)=>a+b,0)/brightness.length;p.settings.exposure=Math.round(Math.max(-.04,Math.min(.05,(.45-mean)*.2))*100)/100;}
-  const finish={label:'Acabado',detail:useMemes?'Cortes limpios. Música de fondo suave con ducking; memes, efectos y sonidos solo cuando encajan.':'Cortes limpios. Montaje directo enfocado en la voz, sin memes ni inserciones.'};
+  const finish={label:'Acabado',detail:useMusic?'Cortes limpios con música de fondo suave cuando hay un recurso disponible.':'Cortes limpios sin música de fondo añadida.'};
   const decisions=[
     {label:'Ritmo',detail:`${Math.max(0,p.media.duration-length).toFixed(1)} s de pausas recortadas. Se protegen las palabras reconocidas.`},
     {label:'Voz',detail:p.media.audio?(p.transcript.length?'Reducción de ruido y normalización de volumen.':'No se detectó voz; se conserva la grabación completa y se evita cortar audio musical o ambiente.'):'La fuente no contiene audio.'},
@@ -61,7 +66,7 @@ export async function autopilot(id,report,{reviewOnly=false,signal,options={}}={
   let direction={events:[],media:[],credits:[]};
   if(useMemes){
     try{
-      direction=await planDirection(p,report);
+      direction=await planDirection(p,report,{signal});
       direction.credits=[];
       if(direction.media.length<4){
         const extra=await planMemes({transcript:p.transcript,clips:p.clips,sourceId:id,duration:p.media.duration});
@@ -70,23 +75,35 @@ export async function autopilot(id,report,{reviewOnly=false,signal,options={}}={
         decisions.push(...extra.decisions);
       }
       direction.credits=[...new Set([...(direction.credits||[]),...direction.media.map(item=>item.attribution).filter(Boolean)])];
-      if(direction.credits.length)decisions.push({label:'Créditos de recursos',detail:direction.credits.join(' · ')});
       p.automatic.direction=direction;
       for(const event of direction.events){p.clips=p.clips.flatMap(c=>event.at>c.start+.5&&event.at<c.end-.5?[{...c,end:event.at},{...c,id:c.id+'-topic',start:event.at,transitionIn:event.effect}]:[c]);}
       finish.detail='Transiciones en cambios de explicación. Cortes limpios en pausas.';
       decisions.push({label:'Cambios de explicación',detail:`${direction.events.length} transiciones propuestas por el analizador del discurso.`},{label:'Recursos',detail:`${direction.media.length} memes, sonidos o imágenes seleccionados por contexto.`});
     }catch(error){
+      signal?.throwIfAborted();
       p.analysis.warnings.push('Análisis de significado no disponible: '+error.message);
       let extra={media:[],decisions:[],credits:[]};
       try{extra=await planMemes({transcript:p.transcript,clips:p.clips,sourceId:id,duration:p.media.duration});}
       catch(fallbackError){p.analysis.warnings.push('Recursos locales no disponibles: '+fallbackError.message);}
-      direction={events:[],media:extra.media,credits:extra.credits||[]};p.automatic.direction=direction;decisions.push(...extra.decisions);if(direction.credits.length)decisions.push({label:'Créditos de recursos',detail:[...new Set(direction.credits)].join(' · ')});
+      direction={events:[],media:extra.media,credits:extra.credits||[]};p.automatic.direction=direction;decisions.push(...extra.decisions);
       decisions.push({label:'Análisis de significado',detail:'No se completó. Se usan memes y sonidos locales por palabras clave, sin inserciones inventadas.'});
     }
   }else{
     p.automatic.direction=direction;
-    decisions.push({label:'Recursos y memes',detail:'Omitidos por petición del usuario para un montaje limpio.'});
+    decisions.push({label:'Memes y efectos',detail:'Desactivados para este montaje.'});
   }
+  if(useBroll){
+    if((await pexelsStatus()).configured){
+      const stock=await planBroll(p,direction.stockRequests||[],report,{signal});
+      direction.media=[...stock,...direction.media];
+      direction.credits=[...new Set([...direction.credits,...stock.map(item=>item.attribution)])];
+      const count=stock.length;
+      decisions.push({label:'Apoyo visual de Pexels',detail:count?`${count} ${count===1?'recurso incorporado':'recursos incorporados'} conservando la voz original.`:'No se encontró un recurso pertinente para los tramos disponibles.'});
+    }else if(options.broll===true){
+      p.analysis.warnings.push('Pexels no está configurado. Guarda PEXELS_API_KEY en .env.local para añadir vídeo de apoyo.');
+    }
+  }
+  if(direction.credits.length)decisions.push({label:'Créditos de recursos',detail:direction.credits.join(' · ')});
   if(useMusic){
     const musicAssets=await readAssets();
     const music=musicAssets.find(asset=>asset.kind==='music'&&/Misión plausible|Jazz desenfadado|Shadow neutra/i.test(asset.name))||musicAssets.find(asset=>asset.kind==='music');

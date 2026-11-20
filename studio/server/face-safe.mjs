@@ -184,10 +184,11 @@ export async function placementsForArtifact(project, artifact, report, {signal}=
       sampled = await sampleFaces(artifact.file, ranges, report, {signal});
     } catch (error) {
       if (signal?.aborted) throw error;
-      report(`No se pudo comprobar caras para colocar memes; se omiten: ${error.message}`);
-      const skip = new Map();
-      for (const visual of visuals) skip.set(visual.index, null);
-      return skip;
+      report(`No se pudo comprobar caras. Pexels se coloca en un recuadro fuera de los subtítulos. ${error.message}`);
+      return new Map(visuals.map(({index,item})=>[index,item?.kind==='pexels'?{
+        x:0.72,y:project.settings?.subtitles&&project.settings.subtitlePosition==='top'?0.47:0.05,
+        w:0.24,h:0.24,position:'right-inset',captionSafe:true,
+      }:null]));
     }
   }
   const placements = new Map();

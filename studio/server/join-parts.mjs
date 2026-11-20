@@ -20,7 +20,7 @@ function parseManifest(encoded){
     if(!VIDEO_EXTENSIONS.has(extension)||!Number.isSafeInteger(part?.size)||part.size<=0){
       throw new Error(`La parte ${index+1} debe ser un vídeo MP4, MOV, MKV o WebM con contenido.`);
     }
-    return {file:`part-${index}${extension}`,size:part.size};
+    return {name:part.name,file:`part-${index}${extension}`,size:part.size};
   });
   const total=parts.reduce((sum,part)=>sum+part.size,0);
   if(!Number.isSafeInteger(total))throw new Error('Las partes superan el tamaño máximo de subida.');
@@ -78,7 +78,8 @@ async function inspect(file,directory,signal){
   const duration=Number(video?.duration)||Number(format?.duration);
   if(!video?.width||!video.height||!Number.isFinite(duration)||duration<=0)throw new Error('No contiene una pista de vídeo válida.');
   const rotation=Number(video.side_data_list?.find(item=>'rotation' in item)?.rotation??0);
-  return {video,audio,duration,rotation,tracks:streams.length};
+  const containerDuration=Number(format?.duration);
+  return {video,audio,duration,concatDuration:Number.isFinite(containerDuration)&&containerDuration>0?containerDuration:duration,rotation,tracks:streams.length};
 }
 
 const streamKeys=['codec_name','codec_tag_string','profile','level','width','height','pix_fmt','field_order',
@@ -98,8 +99,8 @@ function canCopy(parts){
     &&signature(part.video)===videoSignature&&signature(part.audio)===audioSignature);
 }
 
-async function concat(files,output,directory,signal){
-  await fs.writeFile(path.join(directory,'parts.txt'),files.map(file=>`file '${file}'`).join('\n'));
+async function concat(files,durations,output,directory,signal){
+  await fs.writeFile(path.join(directory,'parts.txt'),files.map((file,index)=>`file '${file}'\nduration ${durations[index].toFixed(6)}`).join('\n'));
   await run('ffmpeg',['-v','error','-nostdin','-y','-f','concat','-safe','1','-i','parts.txt',
     '-map','0:v:0','-map','0:a:0?','-c','copy','-movflags','+faststart',output],{cwd:directory,signal});
 }
@@ -151,17 +152,20 @@ async function mergeParts(files,directory,signal){
   const output='joined.mp4';
   if(canCopy(parts)){
     try{
-      await concat(files,output,directory,signal);
-      if(Math.abs((await inspect(output,directory,signal)).duration-expected)<=tolerance)return output;
+      const durations=parts.map(part=>part.concatDuration);
+      await concat(files,durations,output,directory,signal);
+      if(Math.abs((await inspect(output,directory,signal)).duration-expected)<=tolerance)return {output,durations};
     }catch{
       signal?.throwIfAborted();
     }
   }
   const normalized=await normalizeParts(files,parts,directory,signal);
-  await concat(normalized,output,directory,signal);
+  const durations=[];
+  for(const file of normalized)durations.push((await inspect(file,directory,signal)).concatDuration);
+  await concat(normalized,durations,output,directory,signal);
   const joined=await inspect(output,directory,signal);
   if(Math.abs(joined.duration-expected)>tolerance)throw new Error('La duración final no coincide con la suma de las partes.');
-  return output;
+  return {output,durations};
 }
 
 async function assertStorage(user,total){
@@ -186,7 +190,8 @@ export async function importRecordingParts(request,user,{signal}={}){
       await assertQuota(user,'uploadGB',bytes/GIB);
       await assertStorage(user,bytes);
     },signal);
-    const output=path.join(directory,await mergeParts(parts.map(part=>part.file),directory,signal));
+    const merged=await mergeParts(parts.map(part=>part.file),directory,signal);
+    const output=path.join(directory,merged.output);
     const stat=await fs.stat(output);
     signal?.throwIfAborted();
     await assertProjectQuota(user);
@@ -194,7 +199,13 @@ export async function importRecordingParts(request,user,{signal}={}){
     await assertQuota(user,'uploadGB',total/GIB);
     signal?.throwIfAborted();
     await recordUsage(user,'uploadGB',total/GIB);
-    return await importVideo(output,name,user.id);
+    let offset=0;
+    const sourceParts=parts.map((part,index)=>{
+      const start=offset;
+      offset+=Number(merged.durations[index].toFixed(6));
+      return {name:part.name,start,end:offset};
+    });
+    return await importVideo(output,name,user.id,sourceParts);
   }finally{
     await fs.rm(directory,{recursive:true,force:true,maxRetries:3});
   }

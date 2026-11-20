@@ -6,7 +6,8 @@ const GROUPS: {title: string; items: [string, string][]}[] = [
     items: [
       ['Espacio', 'Reproducir o pausar el montaje'],
       ['← →', 'Mover un fotograma atrás o adelante'],
-      ['F', 'Modo cine: oculta los paneles laterales'],
+      ['F', 'Cine · Amplía el monitor de vídeo'],
+      ['⇧ F', 'Enfoque · Amplía el monitor y la línea de tiempo'],
     ],
   },
   {
@@ -25,7 +26,7 @@ const GROUPS: {title: string; items: [string, string][]}[] = [
     title: 'Ventanas',
     items: [
       ['?', 'Abrir esta lista de atajos'],
-      ['Esc', 'Cerrar ventanas y salir del modo cine'],
+      ['Esc', 'Cerrar la ventana activa o volver a la vista Editor'],
     ],
   },
 ];

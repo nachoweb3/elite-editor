@@ -201,11 +201,7 @@
 .nle-progress button{font-size:10px;padding:3px 8px;background:#3a2a4b;border-color:#6b4a8c}
 @keyframes progress-sweep{from{transform:translateX(-60%)}to{transform:translateX(320%)}}
 
-/* Modo cine y ayuda */
-.nle.cine .nle-workspace{grid-template-columns:minmax(0,1fr)}
-.nle.cine .nle-library,.nle.cine .nle-inspector{display:none}
-.nle-viewer-head .nle-cine-button{font-size:10px;padding:6px 9px;border:1px solid #3f3a4d;background:#211d2b;white-space:nowrap}
-.nle-viewer-head .nle-cine-button[aria-pressed=true]{background:#3a2d4c;border-color:#7d5aa0;color:#e2c8ff}
+/* Ayuda */
 .nle-header .nle-help-button{width:30px;height:30px;padding:0;border-radius:50%;font-weight:700;color:#cdb9e6}
 
 /* Zoom de la línea de tiempo */
@@ -239,14 +235,12 @@
  .lib-expand{display:block}
  .nle-library-v2.expanded{position:relative;z-index:6;box-shadow:18px 0 40px -30px #000}
  .nle-library-v2.expanded .lib-tab-bar{background:#15111e}
- .nle.cine .nle-workspace{grid-template-columns:minmax(0,1fr)!important}
  .nle-brand{min-width:0}
  .nle-title{min-width:90px}
  .nle-timeline-footer{padding-right:16px}
 }
 @media(max-width:800px){
  .toast-stack{top:10px;right:10px;left:10px;width:auto}
- .nle-cine-button{display:none}
  .modal-overlay{padding:12px}
  .modal-card{padding:16px}
  .shortcut-grid{gap:14px}

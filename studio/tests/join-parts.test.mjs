@@ -55,6 +55,10 @@ test('copia partes compatibles y convierte partes distintas manteniendo el orden
   for(const [project,colors] of [[copied,[0,2]],[normalized,[1,0]]]){
     assert.ok(Math.abs(project.media.duration-2)<.2);
     assert.equal(project.clips[0].end,project.media.duration);
+    assert.equal(project.sourceParts[0].start,0);
+    assert.ok(Math.abs(project.sourceParts[1].start-1)<.08);
+    assert.equal(project.sourceParts[0].end,project.sourceParts[1].start);
+    assert.equal(project.sourceParts[1].end,project.media.duration);
     for (const [index,channel] of colors.entries()){
       const pixel=path.join(directory,'color.bin');
       await run('ffmpeg',['-v','error','-y','-ss',String(index+.3),'-i',project.source,
@@ -62,6 +66,8 @@ test('copia partes compatibles y convierte partes distintas manteniendo el orden
       assert.ok((await fs.readFile(pixel))[channel]>210);
     }
   }
+  assert.deepEqual(copied.sourceParts.map(part=>part.name),[red.name,blue.name]);
+  assert.deepEqual(normalized.sourceParts.map(part=>part.name),[green.name,red.name]);
   assert.deepEqual(await fs.readdir(CACHE_ROOT),[]);
   assert.equal((await list()).length,2);
 });
