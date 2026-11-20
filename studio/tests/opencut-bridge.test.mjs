@@ -1,0 +1,7 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import {opencutManifest} from '../server/opencut-bridge.mjs';
+const sample=()=>({id:'source',source:'private-path.mp4',revision:2,name:'Video',media:{duration:20},settings:{subtitles:true},clips:[{start:2,end:5,enabled:true},{start:5,end:9,enabled:false},{start:10,end:14,enabled:true}],transcript:[{start:3,end:4,text:'Primera frase'},{start:7,end:8,text:'Fuera'},{start:11,end:12,text:'Segunda frase'}]});
+test('editable manifest removes gaps and aligns captions without exposing paths',()=>{const p=sample(),before=JSON.stringify(p),m=opencutManifest(p);assert.equal(m.duration,7);assert.deepEqual(m.clips.map(c=>c.at),[0,3]);assert.deepEqual(m.captions.map(c=>[c.start,c.end,c.text]),[[1,2,'Primera frase'],[4,5,'Segunda frase']]);assert(!JSON.stringify(m).includes('private-path'));assert.equal(JSON.stringify(p),before);});
+test('reordered source clips retain output order',()=>{const p=sample();p.clips=[p.clips[2],p.clips[0]];const m=opencutManifest(p);assert.deepEqual(m.clips.map(c=>[c.start,c.at]),[[10,0],[2,4]]);assert.deepEqual(m.captions.map(c=>c.start),[1,5]);});
+test('rejects unavailable or misleading sources and invalid cuts',()=>{assert.throws(()=>opencutManifest({...sample(),blank:true}));const p=sample();p.clips[0].sourceId='other';assert.throws(()=>opencutManifest(p));p.clips[0].sourceId=p.id;p.clips[0].end=100;assert.throws(()=>opencutManifest(p));});

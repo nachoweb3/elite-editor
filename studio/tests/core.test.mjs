@@ -1,0 +1,10 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import {parseSilences,proposedClips,validateTimeline,validateSettings,defaults,projectDir} from '../server/core.mjs';
+import {remapWords,srt,ass,escapeAss} from '../server/subtitles.mjs';
+test('silencios abiertos al final se cierran a duración real',()=>{assert.deepEqual(parseSilences('silence_start: 1\nsilence_end: 2\nsilence_start: 8',10),[{start:1,end:2},{start:8,end:10}]);});
+test('los cortes conservan margen de voz y quedan dentro de la fuente',()=>{assert.deepEqual(proposedClips([{start:0,end:1},{start:3,end:5},{start:9,end:10}],10,.2).map(c=>[c.start,c.end]),[[.8,3.2],[4.8,9.2]]);});
+test('un audio totalmente silencioso no se reduce a un fragmento residual',()=>{const clips=proposedClips([{start:0,end:349.333}],349.366667,.18);assert.equal(clips.length,1);assert.equal(clips[0].start,0);assert.equal(clips[0].end,349.366667);assert.match(clips[0].reason,/conserva la grabación completa/);});
+test('línea de tiempo rechaza solapamientos y datos no numéricos',()=>{assert.throws(()=>validateTimeline([{start:0,end:3,enabled:true},{start:2,end:4,enabled:true}],5));assert.throws(()=>validateTimeline([{start:NaN,end:3,enabled:true}],5));assert.throws(()=>validateSettings({...defaults,exposure:30}));assert.throws(()=>projectDir('../'));});
+test('palabras se reasignan al quitar una pausa sin subtítulos fuera del corte',()=>{const words=remapWords([{words:[{word:'Hola',start:1,end:2},{word:'Web3',start:5,end:6},{word:'fuera',start:8,end:9}]}],[{start:0,end:3,enabled:true},{start:4,end:7,enabled:true}]);assert.deepEqual(words.map(w=>[w.word,w.start,w.end]),[['Hola',1,2],['Web3',4,5]]);assert.match(srt(words),/00:00:01,000 --> 00:00:02,000/);});
+test('ASS contiene animación sincronizada y neutraliza códigos en texto',()=>{const output=ass([{start:0,end:.4,word:'hola{\\pos(0,0)}'}],{...defaults,subtitle:'Viral'},1080,1920,2);assert.match(output,/\\kf40/);assert.match(output,/\\t\(0,100/);assert.equal(escapeAss('{\\pos(0,0)}'),'＼pos(0,0)');});

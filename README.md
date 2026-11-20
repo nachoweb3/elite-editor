@@ -3,9 +3,11 @@
 <p align="center"><strong>A local-first video editor with a timeline you control and an AI assistant you can review.</strong></p>
 <p align="center"><a href="README.es.md">Español</a> · <a href="#quick-start-windows">Quick start</a> · <a href="docs/GETTING_STARTED.es.md">First-edit guide / Guía</a> · <a href="docs/ARCHITECTURE.md">Architecture</a> · <a href="docs/ROADMAP.md">Roadmap</a> · <a href="CONTRIBUTING.md">Contribute</a></p>
 
-Elite Editor brings manual editing and local AI assistance into one workspace. Start with a blank timeline, or turn a long recording into a proposed cut, review it, and keep editing. Built on the work of OpenCut and the open-source community, with an integrated local processing backend.
+## Elite Editor Studio for Windows
 
-**Early alpha. Windows-first. Free local editing. No account, subscription or payment system.** Optional external generation uses your own provider key and may incur provider charges. This repository is source code, not a hosted SaaS or a signed desktop installer.
+The Studio beta combines automatic editing, multipart recording import and manual timeline review in one local workspace. [Download the Windows ZIP](https://github.com/nachoweb3/elite-editor/releases/tag/v0.3.0-beta.1) or [build from the Studio source](studio/README.md). Studio uses a local account to keep projects on your machine.
+
+The OpenCut-based editor below also runs independently. It includes browser-local projects, native timeline features and an optional local processing backend. Both offer free local editing. Optional external generation uses your own provider key and may incur provider charges.
 
 ## What you can do
 

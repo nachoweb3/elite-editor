@@ -1,0 +1,13 @@
+.guia{position:fixed;inset:0;z-index:40}
+.guia-veil{position:absolute;inset:0;background:#07080cbb}
+.guia-hole{position:absolute;border:2px solid #c08bff;border-radius:10px;box-shadow:0 0 0 9999px #07080cd0,0 0 22px #a45fee66;pointer-events:none}
+.guia-card{position:fixed;box-sizing:border-box;background:#191420;border:1px solid #6f4590;border-radius:13px;padding:18px 20px 16px;box-shadow:0 18px 45px #000a;color:#e9e2f2}
+.guia-card:focus-visible{outline:2px solid #c08bff;outline-offset:3px}
+.guia-card h2{margin:4px 0 8px;font-size:17px;letter-spacing:-.2px}
+.guia-count{margin:0;font-size:10px;letter-spacing:2px;text-transform:uppercase;color:#b98bea}
+.guia-text{margin:0 0 16px;font-size:13px;line-height:1.65;color:#c9c0d4}
+.guia-actions{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.guia-actions button{font-size:11px;padding:7px 11px}
+.guia-next{margin-left:auto;background:#7c3bbd;border-color:#b071ef;color:#fff;font-weight:600}
+.guia-next:hover{background:#8f49d6}
+@media(max-width:520px){.guia-card{left:12px;right:12px;width:auto;top:auto;bottom:12px}}

@@ -3,6 +3,25 @@ on: [push, pull_request]
 permissions:
   contents: read
 jobs:
+  studio:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: studio
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: studio/package-lock.json
+      - name: Install media test dependencies
+        run: sudo apt-get update && sudo apt-get install -y ffmpeg zip unzip
+      - run: npm ci
+      - run: npm run setup
+      - run: npm run build
+      - run: npm test
+      - run: npm run test:ui
   core:
     runs-on: ubuntu-latest
     steps:

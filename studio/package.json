@@ -1,0 +1,34 @@
+{
+  "name": "elite-editor-studio",
+  "version": "0.3.0-beta.1",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "node scripts/dev.mjs",
+    "build": "tsc --noEmit && vite build",
+    "start": "node server/index.mjs",
+    "doctor": "node scripts/cli.mjs doctor",
+    "analyze": "node scripts/cli.mjs analyze",
+    "edit": "node scripts/cli.mjs edit",
+    "render": "node scripts/cli.mjs render",
+    "test": "node --test tests/*.test.mjs",
+    "setup": "node scripts/init-public.mjs",
+    "model:tiny": "node scripts/model.mjs",
+    "test:ui": "node tests/editor-interactions.mjs && node tests/editor-autosave.mjs"
+  },
+  "license": "MIT",
+  "engines": {"node": ">=24"},
+  "dependencies": {
+    "@remotion/player": "4.0.541",
+    "react": "19.2.0",
+    "react-dom": "19.2.0",
+    "remotion": "4.0.541"
+  },
+  "devDependencies": {
+    "@types/react": "^19.2.0",
+    "@types/react-dom": "^19.2.0",
+    "jsdom": "^31.0.0",
+    "typescript": "~5.9.3",
+    "vite": "^7.2.2"
+  }
+}

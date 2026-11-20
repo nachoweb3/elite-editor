@@ -1,0 +1,24 @@
+export type Clip={id:string;start:number;end:number;enabled:boolean;reason:string};
+export type Word={start:number;end:number;word:string;estimated?:boolean};
+export type Segment={start:number;end:number;text:string;words:Word[]};
+export type Settings={style:string;subtitle:string;profile:string;fit:string;cropX:number;cropY:number;language:string;subtitles:boolean;cleanAudio:boolean;exposure:number;contrast:number;saturation:number;transition:number;soundEffects:boolean;musicId:string|null;musicVolume:number;zoom:number;title:string;subtitlePosition:string;encoder:string};
+export type Artifact={revision?:number;width?:number;height?:number;duration?:number;encoder?:string;createdAt?:string;composition?:string};
+export type CompositionTransition={type:'fadeblack'|'fadewhite'|'slide';duration:number};
+export type CompositionClip={index:number;id:string;sourceId:string;sourceName?:string;start:number;end:number;from:number;fromFrames:number;duration:number;frames:number;src:string;transition:{in:CompositionTransition|null;out:CompositionTransition|null};motion:string;video:{fit:'cover'|'contain';cropX:number;cropY:number;zoom:number;exposure:number;contrast:number;saturation:number}};
+export type CompositionVisual={id:string;index:number;kind:string;src:string;at:number;duration:number;placement:Placement|null;image:boolean;chroma:Chroma;useAudio:boolean;volume:number;name?:string};
+export type CompositionAudio={id:string;type:'media-sound'|'media-overlay'|'music'|'sound-effect'|'track';src:string;at:number;duration:number;sourceIn:number;volume:number;assetId?:string;trackId?:string;mediaIndex?:number;kind?:string;loop?:boolean;duck?:boolean;fadeIn?:number;fadeOut?:number};
+export type CompositionSpec={version:number;fps:number;width:number;height:number;profile:string;duration:number;timeline:CompositionClip[];words:Word[];visuals:CompositionVisual[];audio:CompositionAudio[];captions:{enabled:boolean;template:string;position:string;title:string}};
+export type ShortReframe={mode:'face'|'screen';cropW:number;cropH:number;keyframes:number};
+export type Short={id:string;index:number;start:number;end:number;duration:number;hook:string;sentence?:string;status:string;file?:string;srt?:string;ass?:string;width?:number;height?:number;encoder?:string;reframe?:ShortReframe|null;error?:string};
+export type ShortsState={status:string;error?:string;sourceId?:string;sourceName?:string;generatedAt?:string;renderedAt?:string;finishedAt?:string;count:number;items:Short[]};
+export type Placement={x:number;y:number;w:number;h:number;position?:string;captionSafe?:boolean;textRisk?:number};
+export type Chroma={enabled:boolean|null;color:string;similarity:number;blend:number};
+export type MediaItem={kind?:string;name?:string;description?:string;outputTime?:number;duration?:number;file?:string;status?:string;placement?:Placement|null;useAudio?:boolean;volume?:number;resourceId?:string;reason?:string;effect?:string;page?:string;author?:string;provider?:string;license?:string;attribution?:string;greenScreen?:boolean|null;chroma?:Partial<Chroma>;chromaColor?:string;chromaSimilarity?:number;chromaBlend?:number};
+export type Decision={label:string;detail:string};
+export type DirectionEvent=Partial<MediaItem>&{type?:string;effect?:string;reason?:string};
+export type Automatic={status?:string;error?:string;startedAt?:string;finishedAt?:string;decisions?:Decision[];direction?:{media?:MediaItem[];events?:DirectionEvent[];summaries?:string[];credits?:string[]}};
+export type Project={id:string;blank?:boolean;name:string;revision:number;media:{duration:number;width:number;height:number;audio:boolean};settings:Settings;clips:Clip[];audioTracks?:AudioTrack[];transcript:Segment[];reviewed:boolean;analysis:null|{silences:{start:number;end:number}[];scenes:{start:number;end:number;type:string;confidence:number;suggestions:{type:string}[]}[];warnings:string[];transcriptionComplete:boolean};automatic?:Automatic;artifacts:Record<string,Artifact>;shorts?:ShortsState;composition?:CompositionSpec;jobs:{id:string;type:string;status:string;message:string}[]};
+export type Asset={id:string;name:string;kind:string;tags:string[];license:string};
+
+export type AudioTrack={id:string;assetId:string;name:string;kind:string;sourceDuration:number;at:number;sourceIn:number;duration:number;volume:number;fadeIn:number;fadeOut:number;muted:boolean;locked:boolean};
+export type AudioAsset=Asset&{duration:number;category?:string};
