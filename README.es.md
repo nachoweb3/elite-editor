@@ -6,7 +6,7 @@
 
 ## Estudio automático para Windows
 
-La beta reúne el montaje automático, la unión de grabaciones por partes y la revisión manual en la misma línea de tiempo. [Descarga el ZIP de Windows](https://github.com/nachoweb3/elite-editor/releases/tag/v0.3.0-beta.3) o [compila desde el código del estudio](studio/README.md). El estudio guarda los proyectos en tu equipo y usa una cuenta local.
+La beta reúne el montaje automático, la unión de grabaciones por partes y la revisión manual en la misma línea de tiempo. [Descarga el ZIP de Windows](https://github.com/nachoweb3/elite-editor/releases/tag/v0.3.0-beta.4) o [compila desde el código del estudio](studio/README.md). El estudio guarda los proyectos en tu equipo y usa una cuenta local.
 
 El editor basado en OpenCut que se describe a continuación funciona de forma independiente y se puede usar sin cuenta. La generación externa opcional utiliza tu clave y los créditos de tu proveedor.
 

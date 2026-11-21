@@ -1,6 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {accept,metaphorFor,formatProblem,summarizeDrops} from '../server/stickman.mjs';
+import {execFileSync} from 'node:child_process';
+import {accept,metaphorFor,formatProblem,stickmanSpliceGraph,summarizeDrops} from '../server/stickman.mjs';
 
 const project=()=>({
   id:'prueba',media:{duration:20},
@@ -88,4 +89,22 @@ test('la metáfora que el texto respalda no se cambia',()=>{
   assert.equal(clean.metaphor,'filter');
   const [tool]=accept(project(),[idea({at:12,metaphor:'screen',evidence:'La aplicación tiene siete horas de uso diario'})]);
   assert.equal(tool.metaphor,'screen','la figura del modelo se respeta aunque el texto mencione horas');
+});
+
+test('FFmpeg intercala un stickman sin perder fotogramas a 60 y 120 fps',()=>{
+  const width=32,height=16,bytesPerFrame=width*height*3/2;
+  for(const fps of [60,120]){
+    const graph=stickmanSpliceGraph({width,height,duration:1.5},[{at:.5,duration:.5}],fps);
+    const frames=execFileSync('ffmpeg',[
+      '-hide_banner','-loglevel','error',
+      '-f','lavfi','-i',`color=black:s=${width}x${height}:r=${fps}:d=1.5[out0];anullsrc=r=48000:d=1.5[out1]`,
+      '-f','lavfi','-i',`color=white:s=${width}x${height}:r=${fps}:d=0.5[out0];anullsrc=r=48000:d=0.5[out1]`,
+      '-filter_complex',`${graph};[aout]anullsink`,
+      '-map','[vout]','-threads:v','1','-pix_fmt','yuv420p','-f','rawvideo','pipe:1',
+    ],{windowsHide:true});
+    assert.equal(frames.length,2*fps*bytesPerFrame);
+    assert.equal(frames[.25*fps*bytesPerFrame],16);
+    assert.equal(frames[.75*fps*bytesPerFrame],235);
+    assert.equal(frames[1.25*fps*bytesPerFrame],16);
+  }
 });

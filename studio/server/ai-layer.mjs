@@ -2,9 +2,10 @@ import {randomUUID} from 'node:crypto';
 import {load,save} from './core.mjs';
 import {readAssets} from './engine.mjs';
 import {catalogue} from './director.mjs';
+import {CLIP_TRANSITIONS,isClipTransition} from '../shared/transitions.mjs';
 
 const STATUSES = new Set(['pending','accepted','rejected']);
-const EFFECTS = new Set(['fadeblack','fadewhite','slide','none']);
+const EFFECTS = Object.keys(CLIP_TRANSITIONS);
 const MEDIA_KINDS = new Set(['meme','sound','pexels']);
 
 function busy(p) {
@@ -217,7 +218,7 @@ async function updateEvent(p, body, event) {
     else if (event.status === 'accepted') applyTransition(p, oldTime, event.effect || 'fadeblack');
   }
   if (changes.effect !== undefined) {
-    if (!EFFECTS.has(changes.effect) || changes.effect === 'none') throw new Error('Transición inválida');
+    if (!isClipTransition(changes.effect)) throw new Error('Transición inválida');
     event.effect = changes.effect;
     if (event.status !== 'rejected') applyTransition(p, oldTime, event.effect);
   }
@@ -230,9 +231,8 @@ async function updateEvent(p, body, event) {
     if (applied.at !== null) event.at = Number(Number(applied.at).toFixed(3));
   }
   if (changes.regenerate === true) {
-    const effects = ['fadeblack','fadewhite','slide'];
-    const current = effects.indexOf(event.effect);
-    event.effect = effects[(current + 1) % effects.length];
+    const current = EFFECTS.indexOf(event.effect);
+    event.effect = EFFECTS[(current + 1) % EFFECTS.length];
     event.status = 'pending';
     if (event.status !== 'rejected') applyTransition(p, oldTime, event.effect);
     event.regeneratedAt = new Date().toISOString();

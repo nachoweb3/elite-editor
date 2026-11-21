@@ -5,6 +5,7 @@ import {randomUUID} from 'node:crypto';
 import {Readable,Transform} from 'node:stream';
 import {pipeline} from 'node:stream/promises';
 import {ROOT,probe,run} from './core.mjs';
+import {sourceDimensions} from '../shared/source-format.mjs';
 import {sourceToOutput} from './director.mjs';
 import {searchPexels} from './pexels.mjs';
 
@@ -95,7 +96,9 @@ async function cacheStock(item,signal){
 
 export async function planBroll(project,stockRequests,report,{signal}={}){
   const candidates=brollCandidates(project,stockRequests);
-  const orientation=project.settings.profile.startsWith('youtube')?'landscape':'portrait';
+  const [width,height]=sourceDimensions(project.media);
+  const landscape=project.settings.profile==='source'?width>=height:project.settings.profile.startsWith('youtube');
+  const orientation=landscape?'landscape':'portrait';
   const media=[],used=new Set();
   for(const candidate of candidates){
     signal?.throwIfAborted();

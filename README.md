@@ -5,7 +5,7 @@
 
 ## Elite Editor Studio for Windows
 
-The Studio beta combines automatic editing, multipart recording import and manual timeline review in one local workspace. [Download the Windows ZIP](https://github.com/nachoweb3/elite-editor/releases/tag/v0.3.0-beta.3) or [build from the Studio source](studio/README.md). Studio uses a local account to keep projects on your machine.
+The Studio beta combines automatic editing, multipart recording import and manual timeline review in one local workspace. [Download the Windows ZIP](https://github.com/nachoweb3/elite-editor/releases/tag/v0.3.0-beta.4) or [build from the Studio source](studio/README.md). Studio uses a local account to keep projects on your machine.
 
 The OpenCut-based editor below also runs independently. It includes browser-local projects, native timeline features and an optional local processing backend. Both offer free local editing. Optional external generation uses your own provider key and may incur provider charges.
 

@@ -1,8 +1,9 @@
 import fs from 'node:fs/promises';
 import path from 'node:path';
 import {createHash,randomUUID} from 'node:crypto';
-import {ROOT,python,run,probe,load,save} from './core.mjs';
+import {CACHE_ROOT,ROOT,python,run,probe,load,save} from './core.mjs';
 import {sourceToOutput} from './director.mjs';
+import {mediaFrameRate,outputFrameRate,outputQuality,videoEncodingArgs} from './render-format.mjs';
 
 const PREFERRED_MODELS=['qwen3:4b-instruct-2507-q4_K_M','qwen3:4b','whiterabbitneo:latest'];
 let modelPromise,lastModel='';
@@ -218,29 +219,40 @@ async function voiceFile(item){
   try{const info=await probe(resolved);return info.audio?resolved:null;}catch{return null;}
 }
 
-async function buildInsert(item,width,height,duration,report){
+async function insertFormat(project,artifact){
+  const fps=mediaFrameRate(artifact)||mediaFrameRate(await probe(artifact.file).catch(()=>null))||outputFrameRate(project.settings,[project.media]);
+  return {width:artifact.width,height:artifact.height,fps,quality:artifact.quality||outputQuality(project.settings)};
+}
+
+async function buildInsert(item,{width,height,fps,quality},duration,report){
   const voice=await voiceFile(item);
-  const key=createHash('sha256').update(JSON.stringify({c:item.concept,p:item.caption||'',m:item.metaphor,d:duration,w:width,h:height,v:voice||''})).digest('hex').slice(0,24);
-  const dir=path.join(ROOT,'cache','stickman');await fs.mkdir(dir,{recursive:true});
+  const key=createHash('sha256').update(JSON.stringify({c:item.concept,p:item.caption||'',m:item.metaphor,d:duration,w:width,h:height,fps,quality,v:voice||''})).digest('hex').slice(0,24);
+  const dir=path.join(CACHE_ROOT,'stickman');await fs.mkdir(dir,{recursive:true});
   const file=path.join(dir,key+'.mp4');
   try{await fs.access(file);return file;}catch{}
-  const frames=path.join(dir,key+'-frames'),spec=path.join(dir,key+'.json');
-  await fs.writeFile(spec,JSON.stringify({width,height,fps:30,duration,concept:item.concept,caption:item.caption||'',metaphor:item.metaphor,outDir:frames}),'utf8');
-  report(`Dibujando la explicación de ${item.concept.slice(0,40)}`);
-  await run(python,[path.join(ROOT,'workers/stickman.py'),spec],{log:report,timeout:600000});
-  const args=['-v','error','-y','-framerate','30','-i',path.join(frames,'frame-%04d.png')];
-  if(voice)args.push('-i',voice);else args.push('-f','lavfi','-i','anullsrc=r=48000:cl=stereo');
-  args.push('-map','0:v','-map','1:a','-af','aresample=48000,apad','-t',String(duration),'-frames:v',String(Math.round(duration*30)),'-c:v','libx264','-preset','veryfast','-crf','18','-pix_fmt','yuv420p','-c:a','aac','-b:a','160k','-ac','2','-ar','48000','-movflags','+faststart',file);
-  await run('ffmpeg',args,{log:report});
-  await fs.rm(frames,{recursive:true,force:true}).catch(()=>{});
-  await fs.rm(spec,{force:true}).catch(()=>{});
-  return file;
+  const build=await fs.mkdtemp(path.join(dir,'build-'));
+  const frames=path.join(build,'frames'),spec=path.join(build,'spec.json');
+  const tempFile=path.join(build,'insert.mp4');
+  try{
+    await fs.writeFile(spec,JSON.stringify({width,height,fps,duration,concept:item.concept,caption:item.caption||'',metaphor:item.metaphor,outDir:frames}),'utf8');
+    report(`Dibujando la explicación de ${item.concept.slice(0,40)}`);
+    await run(python,[path.join(ROOT,'workers/stickman.py'),spec],{log:report,timeout:600000});
+    const args=['-v','error','-y','-framerate',String(fps),'-i',path.join(frames,'frame-%04d.png')];
+    if(voice)args.push('-i',voice);else args.push('-f','lavfi','-i','anullsrc=r=48000:cl=stereo');
+    args.push('-map','0:v','-map','1:a','-vf','setsar=1','-af','aresample=48000,apad','-t',String(duration),'-frames:v',String(Math.round(duration*fps)),...videoEncodingArgs(false,quality,{intermediate:true}),'-pix_fmt','yuv420p','-c:a','aac','-b:a','160k','-ac','2','-ar','48000','-movflags','+faststart',tempFile);
+    await run('ffmpeg',args,{log:report});
+    await fs.rename(tempFile,file);
+    return file;
+  }finally{
+    await fs.rm(build,{recursive:true,force:true}).catch(()=>{});
+  }
 }
 
 export async function stickmanInserts(p,artifact,report){
   const plan=p.stickmen;
   if(!plan?.enabled||!plan.items?.length||!artifact?.width||!artifact?.height)return [];
   if(plan.mode==='cut')return [];
+  const format=await insertFormat(p,artifact);
   const inserts=[];
   for(const item of plan.items){
     // El montaje puede haber cambiado desde la planificación: la posición se
@@ -253,7 +265,7 @@ export async function stickmanInserts(p,artifact,report){
     if(at===null||at<0.4)continue;
     const duration=Math.min(item.duration||DURATION,clip.end-source,artifact.duration-at-0.2);
     if(duration<1.5)continue;
-    try{inserts.push({at,duration,concept:item.concept,file:await buildInsert(item,artifact.width,artifact.height,duration,report)});}
+    try{inserts.push({at,duration,concept:item.concept,file:await buildInsert(item,format,duration,report)});}
     catch(error){report(`No se pudo dibujar la explicación de ${String(item.concept).slice(0,30)}: ${error.message}`);}
   }
   return inserts;
@@ -264,6 +276,7 @@ export async function stickmanInserts(p,artifact,report){
 export async function cutInserts(p,artifact,report){
   const plan=p.stickmen;
   if(!plan?.enabled||plan.mode!=='cut'||!plan.items?.length||!artifact?.width||!artifact?.height)return [];
+  const format=await insertFormat(p,artifact);
   const list=[];
   for(const item of plan.items){
     const source=Number(item.at);
@@ -273,10 +286,29 @@ export async function cutInserts(p,artifact,report){
     if(at===null||at<0.2||at>artifact.duration-0.2)continue;
     const duration=Math.max(1.5,Math.min(item.duration||DURATION,artifact.duration-at+2));
     if(list.some(other=>Math.abs(other.at-at)<Math.max(other.duration,duration)+0.3))continue;
-    try{list.push({at,duration,concept:item.concept,file:await buildInsert(item,artifact.width,artifact.height,duration,report)});}
+    try{list.push({at,duration,concept:item.concept,file:await buildInsert(item,format,duration,report)});}
     catch(error){report(`No se pudo dibujar la explicación de ${String(item.concept).slice(0,30)}: ${error.message}`);}
   }
   return list.sort((a,b)=>a.at-b.at);
+}
+
+export function stickmanSpliceGraph(artifact,inserts,fps){
+  const branches=inserts.length+1;
+  let graph=`[0:v]split=${branches}${Array.from({length:branches},(_,k)=>`[bv${k}]`).join('')};[0:a]asplit=${branches}${Array.from({length:branches},(_,k)=>`[ba${k}]`).join('')};`;
+  const points=[0,...inserts.map(insert=>insert.at),artifact.duration],pieces=[];
+  for(let k=0;k<branches;k++){
+    const start=points[k],end=points[k+1];
+    graph+=`[bv${k}]trim=start=${start.toFixed(3)}:end=${end.toFixed(3)},setpts=PTS-STARTPTS,setsar=1,format=yuv420p[o${k}];`;
+    graph+=`[ba${k}]atrim=start=${start.toFixed(3)}:end=${end.toFixed(3)},asetpts=PTS-STARTPTS[a${k}];`;
+    pieces.push(`[o${k}][a${k}]`);
+    if(k<inserts.length){
+      const source=k+1,item=inserts[k];
+      graph+=`[${source}:v]fps=${fps},setpts=PTS-STARTPTS,scale=${artifact.width}:${artifact.height}:force_original_aspect_ratio=decrease,pad=${artifact.width}:${artifact.height}:(ow-iw)/2:(oh-ih)/2:color=0xF6F2E9,setsar=1,format=yuv420p[s${k}];`;
+      graph+=`[${source}:a]aresample=48000,apad,atrim=duration=${item.duration.toFixed(3)},asetpts=PTS-STARTPTS[sa${k}];`;
+      pieces.push(`[s${k}][sa${k}]`);
+    }
+  }
+  return `${graph}${pieces.join('')}concat=n=${pieces.length}:v=1:a=1[combined][aout];[combined]fps=${fps}[vout]`;
 }
 
 export async function spliceInserts(id,preview,report){
@@ -285,33 +317,25 @@ export async function spliceInserts(id,preview,report){
   const inserts=await cutInserts(p,artifact,report);
   if(!inserts.length)return artifact;
   report(`Insertando ${inserts.length} explicación(es) de stickman en el montaje`);
+  const {fps,quality}=await insertFormat(p,artifact);
   const args=['-v','error','-y','-i',artifact.file];
   for(const insert of inserts)args.push('-i',insert.file);
-  const branches=inserts.length+1;
-  let graph=`[0:v]split=${branches}${Array.from({length:branches},(_,k)=>`[bv${k}]`).join('')};[0:a]asplit=${branches}${Array.from({length:branches},(_,k)=>`[ba${k}]`).join('')};`;
-  const points=[0,...inserts.map(insert=>insert.at),artifact.duration],pieces=[];
-  for(let k=0;k<branches;k++){
-    const start=points[k],end=points[k+1];
-    graph+=`[bv${k}]trim=start=${start.toFixed(3)}:end=${end.toFixed(3)},setpts=PTS-STARTPTS,format=yuv420p[o${k}];`;
-    graph+=`[ba${k}]atrim=start=${start.toFixed(3)}:end=${end.toFixed(3)},asetpts=PTS-STARTPTS[a${k}];`;
-    pieces.push(`[o${k}][a${k}]`);
-    if(k<inserts.length){
-      const source=k+1,item=inserts[k];
-      graph+=`[${source}:v]fps=30,setpts=PTS-STARTPTS,scale=${artifact.width}:${artifact.height}:force_original_aspect_ratio=decrease,pad=${artifact.width}:${artifact.height}:(ow-iw)/2:(oh-ih)/2:color=0xF6F2E9,setsar=1,format=yuv420p[s${k}];`;
-      graph+=`[${source}:a]aresample=48000,apad,atrim=duration=${item.duration.toFixed(3)},asetpts=PTS-STARTPTS[sa${k}];`;
-      pieces.push(`[s${k}][sa${k}]`);
-    }
-  }
-  graph+=`${pieces.join('')}concat=n=${pieces.length}:v=1:a=1[vout][aout]`;
-  const dir=path.join(ROOT,'cache',randomUUID());await fs.mkdir(dir,{recursive:true});
-  await fs.writeFile(path.join(dir,'splice.ffgraph'),graph);
+  const dir=path.join(CACHE_ROOT,randomUUID());await fs.mkdir(dir,{recursive:true});
+  const filterFile=path.join(dir,'splice.ffgraph');
   const output=artifact.file.replace(/\.mp4$/,'-stickman.mp4');
-  args.push('-/filter_complex',path.join(dir,'splice.ffgraph'),'-map','[vout]','-map','[aout]','-c:v',artifact.encoder==='NVENC'?'h264_nvenc':'libx264','-c:a','aac','-b:a','192k','-ar','48000','-pix_fmt','yuv420p','-movflags','+faststart',output);
-  await run('ffmpeg',args,{log:report});
+  try{
+    await fs.writeFile(filterFile,stickmanSpliceGraph(artifact,inserts,fps));
+    args.push('-/filter_complex',filterFile,'-map','[vout]','-map','[aout]',...videoEncodingArgs(artifact.encoder==='NVENC',quality),'-c:a','aac','-b:a','192k','-ar','48000','-pix_fmt','yuv420p','-movflags','+faststart',output);
+    await run('ffmpeg',args,{log:report});
+  }finally{
+    await fs.rm(filterFile,{force:true}).catch(()=>{});
+    await fs.rmdir(dir).catch(()=>{});
+  }
   const info=await probe(output),expected=artifact.duration+inserts.reduce((total,insert)=>total+insert.duration,0);
   if(Math.abs(info.duration-expected)>0.35)throw new Error(`Duración incorrecta tras insertar las explicaciones: ${info.duration.toFixed(2)} s frente a ${expected.toFixed(2)} s`);
+  if(info.width!==artifact.width||info.height!==artifact.height||Math.abs(mediaFrameRate(info)-fps)>0.05)throw new Error('La inserción cambió el formato de vídeo');
   const latest=await load(id);
-  latest.artifacts[kind]={...latest.artifacts[kind],file:output,duration:info.duration,stickmanCut:true,createdAt:new Date().toISOString()};
+  latest.artifacts[kind]={...latest.artifacts[kind],file:output,duration:info.duration,fps,quality,stickmanCut:true,createdAt:new Date().toISOString()};
   await save(latest);
   report(`Vídeo con la explicación insertada: ${info.duration.toFixed(1)} s`);
   return latest.artifacts[kind];
@@ -322,7 +346,7 @@ export function insertOverlayGraph(video,inserts,index,args){
   for(const insert of inserts){
     args.push('-i',insert.file);
     const source=index++,end=insert.at+insert.duration,fade=Math.min(0.3,insert.duration/6);
-    graph+=`[${source}:v]fps=30,format=rgba,setpts=PTS-STARTPTS,fade=t=in:st=0:d=${fade.toFixed(2)}:alpha=1,fade=t=out:st=${(insert.duration-fade).toFixed(2)}:d=${fade.toFixed(2)}:alpha=1,setpts=PTS+${insert.at.toFixed(2)}/TB[sk${source}];[${video}][sk${source}]overlay=x=0:y=0:eof_action=pass:repeatlast=0:enable='between(t,${insert.at.toFixed(2)},${end.toFixed(2)})'[v${source}];`;
+    graph+=`[${source}:v]format=rgba,setpts=PTS-STARTPTS,fade=t=in:st=0:d=${fade.toFixed(2)}:alpha=1,fade=t=out:st=${(insert.duration-fade).toFixed(2)}:d=${fade.toFixed(2)}:alpha=1,setpts=PTS+${insert.at.toFixed(2)}/TB[sk${source}];[${video}][sk${source}]overlay=x=0:y=0:eof_action=pass:repeatlast=0:enable='between(t,${insert.at.toFixed(2)},${end.toFixed(2)})'[v${source}];`;
     video=`v${source}`;
   }
   return {graph,video,index};

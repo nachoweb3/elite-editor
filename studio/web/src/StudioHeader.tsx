@@ -1,4 +1,5 @@
 import {useEffect,useRef,type ReactNode} from 'react';
+import type {StudioTheme} from './studio-theme';
 
 export type WorkspaceView='editor'|'focus'|'cinema';
 
@@ -17,11 +18,13 @@ export function saveWorkspaceView(view:WorkspaceView){
   try{localStorage.setItem(preferenceKey,view);}catch{}
 }
 
-export function StudioHeader({title,status,view,onView,projectActions,children}:{
+export function StudioHeader({title,status,view,onView,theme,onTheme,projectActions,children}:{
   title:string;
   status:string;
   view:WorkspaceView;
   onView:(view:WorkspaceView)=>void;
+  theme:StudioTheme;
+  onTheme:(theme:StudioTheme)=>void;
   projectActions:ReactNode;
   children:ReactNode;
 }){
@@ -69,6 +72,13 @@ export function StudioHeader({title,status,view,onView,projectActions,children}:
           if(event.target instanceof HTMLElement&&event.target.closest('button,a'))closeMenu(true);
         }}>
           {projectActions}
+          <label className="studio-theme-picker">
+            <span>Tema visual</span>
+            <select value={theme} onChange={event=>onTheme(event.target.value==='lime'?'lime':'cobalt')}>
+              <option value="cobalt">Azul cobalto</option>
+              <option value="lime">Lima</option>
+            </select>
+          </label>
         </div>
       </details>
       {children}

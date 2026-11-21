@@ -1,18 +1,21 @@
 // One source of truth for the live monitor and the rendered file.
 // Both Remotion and the FFmpeg pipeline build their work from this plan:
 // clips, transitions, captions, overlay geometry/chroma and audio events.
+import {outputFrameRate, sourceCanvas} from './source-format.mjs';
+import {CLIP_TRANSITIONS,isClipTransition} from './transitions.mjs';
+
 export const COMPOSITION_VERSION = 1;
 export const COMPOSITION_FPS = 30;
 
 const PROFILE_SIZES = {
   reels: [1080, 1920],
+  reels4k: [2160, 3840],
   tiktok: [1080, 1920],
   shorts: [1080, 1920],
   youtube: [1920, 1080],
   youtube4k: [3840, 2160],
 };
 
-const TRANSITION_TYPES = new Set(['fadeblack', 'fadewhite', 'slide']);
 const OVERLAY_KINDS = new Set(['meme', 'pexels']);
 const clamp = (value, min, max) => Math.min(max, Math.max(min, Number(value) || 0));
 const number = (value, fallback = 0) => Number.isFinite(Number(value)) ? Number(value) : fallback;
@@ -55,16 +58,17 @@ export function chromaFor(item = {}) {
 // The transition plan is deliberately metadata-only. Remotion animates it with
 // CSS and FFmpeg translates it into filters, but both read the same type and
 // duration from here.
-export function transitionFor(clip, index, count, settings = {}) {
-  const length = Math.max(1 / COMPOSITION_FPS, number(clip?.end) - number(clip?.start));
+export function transitionFor(clip, index, count, settings = {}, fps = COMPOSITION_FPS) {
+  const length = Math.max(1 / fps, number(clip?.end) - number(clip?.start));
+  if(length<=1/fps)return {in:null,out:null};
   const globalDuration = clamp(settings.transition, 0, 3);
   const fade = globalDuration ? Math.min(globalDuration, length / 3) : 0;
   const requested = clip?.transitionIn;
   let enter = null;
-  if (TRANSITION_TYPES.has(requested)) {
+  if (isClipTransition(requested)) {
     enter = {
       type: requested,
-      duration: Math.min(requested === 'slide' ? 0.22 : 0.18, length / 2),
+      duration: Math.min(CLIP_TRANSITIONS[requested].duration, length / 2),
     };
   } else if (index > 0 && fade > 0) {
     enter = {type: 'fadeblack', duration: fade};
@@ -109,6 +113,11 @@ export function buildComposition(project, options = {}) {
     ? (assetId) => options.assetUrl(assetId, project)
     : defaultAssetUrl;
   const clips = Array.isArray(project.clips) ? project.clips.filter(clip => clip.enabled !== false) : [];
+  const sources = new Map((options.sources || []).map(source => [source.id, source.media]));
+  sources.set(project.id,project.media);
+  const sourceMedia = [...new Set(clips.map(clip=>clip.sourceId||project.id))].map(id=>sources.get(id)).filter(Boolean);
+  if (!sourceMedia.length && project.media) sourceMedia.push(project.media);
+  const fps = outputFrameRate(settings,sourceMedia);
   const transcripts = transcriptMap(project, options);
   const timeline = [];
   const words = [];
@@ -117,12 +126,12 @@ export function buildComposition(project, options = {}) {
 
   clips.forEach((clip, index) => {
     const start = Math.max(0, number(clip.start));
-    const end = Math.max(start + 1 / COMPOSITION_FPS, number(clip.end));
+    const end = Math.max(start + 1 / fps, number(clip.end));
     const duration = end - start;
-    const frames = Math.max(1, Math.round(duration * COMPOSITION_FPS));
+    const frames = Math.max(1, Math.round((fromSeconds + duration) * fps) - fromFrames);
     const sourceId = clip.sourceId || project.id;
     const ownerTranscript = transcripts.get(sourceId) || [];
-    const transition = transitionFor(clip, index, clips.length, settings);
+    const transition = transitionFor(clip, index, clips.length, settings, fps);
     const item = {
       index,
       id: clip.id || `clip-${index}`,
@@ -177,7 +186,7 @@ export function buildComposition(project, options = {}) {
   media.forEach((item, index) => {
     if (!item || item.status === 'rejected' || (!item.file && !item.resourceId)) return;
     const at = Math.max(0, number(item.outputTime));
-    if (at >= duration - 1 / COMPOSITION_FPS) return;
+    if (at >= duration - 1 / fps) return;
     const requestedDuration = number(item.duration, item.kind === 'sound' ? 2 : 3.2);
     const itemDuration = Math.max(0.1, Math.min(Math.max(0.1, requestedDuration), duration - at));
     const kind = item.kind || '';
@@ -283,13 +292,10 @@ export function buildComposition(project, options = {}) {
     });
   }
 
-  const [width, height] = PROFILE_SIZES[settings.profile] || [
-    number(project.media?.width, 1080),
-    number(project.media?.height, 1920),
-  ];
+  const [width, height] = PROFILE_SIZES[settings.profile] || sourceCanvas(project.media,sourceMedia);
   return {
     version: COMPOSITION_VERSION,
-    fps: COMPOSITION_FPS,
+    fps,
     width,
     height,
     profile: settings.profile || 'reels',

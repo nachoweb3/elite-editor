@@ -18,6 +18,17 @@ const base={
  audioTracks:[{id:'t1',assetId:'asset-1',name:'Música manual',kind:'music',at:0,sourceIn:0,duration:2,volume:.3,fadeIn:.2,fadeOut:.1,muted:false}],
 };
 
+test('native canvas uses display rotation and retains high frame rates without drift across cuts',()=>{
+ const project={...base,media:{width:2560,height:1440,rotation:90,fps:'120/1'},settings:{...base.settings,profile:'source'},clips:[
+  {id:'a',start:0,end:1.004,enabled:true},
+  {id:'b',start:2,end:3.004,enabled:true},
+  {id:'c',start:4,end:5.004,enabled:true},
+ ]};
+ const plan=buildComposition(project);
+ assert.deepEqual([plan.width,plan.height,plan.fps],[1440,2560,120]);
+ assert.equal(plan.timeline.reduce((total,clip)=>total+clip.frames,0),Math.round(plan.duration*120));
+});
+
 test('the shared plan carries clip timing, transitions and remapped words',()=>{
  const plan=buildComposition(base);
  assert.equal(outputDuration(base),4);

@@ -1,3 +1,5 @@
+import type {ClipTransitionType} from './transitions.mjs';
+
 export const COMPOSITION_VERSION: number;
 export const COMPOSITION_FPS: number;
 export function outputDuration(project: unknown): number;
@@ -12,10 +14,11 @@ export function transitionFor(
   clip: unknown,
   index: number,
   count: number,
-  settings?: unknown
+  settings?: unknown,
+  fps?: number
 ): {
-  in: {type: string; duration: number} | null;
-  out: {type: string; duration: number} | null;
+  in: {type: ClipTransitionType; duration: number} | null;
+  out: {type: ClipTransitionType; duration: number} | null;
 };
 export function buildComposition(project: unknown, options?: unknown): {
   version: number;

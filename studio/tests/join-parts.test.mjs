@@ -49,8 +49,8 @@ test('copia partes compatibles y convierte partes distintas manteniendo el orden
   const normalized=await importRecordingParts(upload([green,red]),owner);
   assert.equal(copied.name,'Montaje de varias partes.mp4');
   assert.equal(copied.media.fps,'24/1','La copia conserva la cadencia original');
-  assert.equal(normalized.media.fps,'30/1');
-  assert.deepEqual([normalized.media.width,normalized.media.height],[200,300]);
+  assert.equal(normalized.media.fps,'25/1','La conversión conserva la cadencia más alta de las partes');
+  assert.deepEqual([normalized.media.width,normalized.media.height],[320,480],'El lienzo vertical tiene espacio para ambas partes a resolución nativa');
   assert.equal(normalized.media.audio,true);
   for(const [project,colors] of [[copied,[0,2]],[normalized,[1,0]]]){
     assert.ok(Math.abs(project.media.duration-2)<.2);

@@ -197,8 +197,8 @@ def main():
     if not cap.isOpened() or not w or not h:raise RuntimeError('No se puede leer el vídeo para retoque')
     options=mp.tasks.vision.FaceLandmarkerOptions(base_options=mp.tasks.BaseOptions(model_asset_path=str(ROOT/'models/face_landmarker.task')),running_mode=mp.tasks.vision.RunningMode.VIDEO,num_faces=1,min_face_detection_confidence=.6,min_face_presence_confidence=.6,min_tracking_confidence=.6)
     encoder=req.get('encoder','libx264');cmd=['ffmpeg','-v','error','-y','-f','rawvideo','-pix_fmt','bgr24','-s',f'{w}x{h}','-r',str(fps),'-i','pipe:0','-i',req['source'],'-map','0:v:0','-map','1:a?','-c:v',encoder,'-pix_fmt','yuv420p','-c:a','aac','-b:a','192k','-movflags','+faststart',req['output']]
-    if encoder=='libx264':cmd[-1:-1]=['-preset','fast','-crf','18']
-    elif encoder=='h264_nvenc':cmd[-1:-1]=['-preset','p4','-cq','18','-b:v','0']
+    if encoder=='libx264':cmd[-1:-1]=['-preset','fast','-crf','13']
+    elif encoder=='h264_nvenc':cmd[-1:-1]=['-preset','p4','-cq','13','-b:v','0']
     proc=subprocess.Popen(cmd,stdin=subprocess.PIPE,stderr=subprocess.PIPE,creationflags=getattr(subprocess,'CREATE_NO_WINDOW',0))
     workers=min(4,os.cpu_count() or 1);executor=ThreadPoolExecutor(max_workers=workers);pending=[]
     def flush(keep=0):

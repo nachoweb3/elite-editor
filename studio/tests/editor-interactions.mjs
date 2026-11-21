@@ -34,6 +34,16 @@ try{
  const studio=document.querySelector('.nle');
  const workspacePicker=document.querySelector('[aria-label="Vista del espacio de trabajo"]');
  assert(studio&&workspacePicker,'El selector de vista debe estar en la cabecera');
+ const themePicker=document.querySelector('.studio-theme-picker select');
+ assert(themePicker,'Proyecto debe ofrecer el selector del tema visual');
+ assert.equal(themePicker.value,'cobalt','El tema predeterminado es Azul cobalto');
+ assert.equal(document.documentElement.dataset.studioTheme,'cobalt');
+ await act(async()=>{themePicker.value='lime';themePicker.dispatchEvent(new Event('change',{bubbles:true}));});
+ assert.equal(document.documentElement.dataset.studioTheme,'lime');
+ assert.equal(localStorage.getItem('nacho:studio-theme'),'lime');
+ assert.equal(document.querySelector('.nle'),studio,'Cambiar el tema conserva la misma sesión de edición');
+ await act(async()=>{themePicker.value='cobalt';themePicker.dispatchEvent(new Event('change',{bubbles:true}));});
+ assert.equal(localStorage.getItem('nacho:studio-theme'),'cobalt');
  assert.equal(studio.dataset.workspace,'focus','La vista guardada se restaura al abrir el editor');
  assert.equal(workspacePicker.value,'focus');
  await key('f');

@@ -1,3 +1,5 @@
+import {applyStudioTheme,readStudioTheme} from './studio-theme';
+
 const url=new URL(location.href);
 if(url.searchParams.has('auto')){
  url.searchParams.delete('auto');
@@ -5,4 +7,7 @@ if(url.searchParams.has('auto')){
  history.replaceState(history.state,'',url);
 }
 if(url.searchParams.has('advanced'))void import('./main');
-else void import('./VideoEditor');
+else {
+ applyStudioTheme(readStudioTheme());
+ void import('./VideoEditor');
+}

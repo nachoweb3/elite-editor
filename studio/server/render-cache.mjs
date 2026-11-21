@@ -87,15 +87,14 @@ export function throwIfCancelled(signal) {
   if (signal?.aborted) throw new Error('Trabajo cancelado');
 }
 
-export function partKey({source, clip, preview, width, height, filter, hasAudio, encoderVersion}) {
+export function partKey({source, clip, width, height, filter, hasAudio, encoderVersion}) {
   return cacheHash({
-    version: 4,
+    version: 5,
     source,
     start: clip.start,
     end: clip.end,
     transitionIn: clip.transitionIn || 'none',
     motion: clip.motion || 'none',
-    preview,
     width,
     height,
     filter,
@@ -104,33 +103,36 @@ export function partKey({source, clip, preview, width, height, filter, hasAudio,
   });
 }
 
-export function compositeKey({parts, words, settings, duration, width, height, music, tracks, preview, title, soundEffects}) {
+export function compositeKey({parts, words, settings, duration, width, height, fps, quality, willDecorate, music, tracks, title, soundEffects, audioPlan, assets}) {
   return cacheHash({
-    version: 4,
+    version: 6,
     parts,
     words,
     settings,
     duration,
     width,
     height,
+    fps,
+    quality,
+    willDecorate,
     music,
     tracks,
-    preview,
+    audioPlan,
+    assets,
     title,
     soundEffects,
   });
 }
 
-export function overlayKey({artifact, media, visuals, audio, placements, inserts, preview, width, height}) {
+export function overlayKey({artifact, media, visuals, audio, placements, inserts, width, height}) {
   return cacheHash({
-    version: 5,
+    version: 6,
     artifact,
     media,
     visuals,
     audio,
     placements: [...placements.entries()].sort(([a], [b]) => a - b),
     inserts,
-    preview,
     width,
     height,
   });

@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {protectSpeech} from '../server/autopilot.mjs';
-import {validateEvents,sourceToOutput} from '../server/director.mjs';
+import {applyPlannedTransitions,planLocalTransitions,validateEvents,sourceToOutput} from '../server/director.mjs';
 import {automationOptions,resolveAutomationProfile} from '../server/automation-options.mjs';
 import {profiles} from '../server/engine.mjs';
 test('speech crossing a proposed silence remains in the timeline',()=>{
@@ -26,14 +26,35 @@ test('automation retries keep valid recipe settings, including independent Pexel
  assert.deepEqual(automationOptions({broll:'yes',subtitle:'otro'}),{});
  assert.throws(()=>automationOptions({targetFormat:'4k'}),/formato de montaje/);
 });
-test('automatic output honors explicit canvas orientation and detects rotated phone clips',()=>{
+
+test('automatic transitions apply only at strong spoken section boundaries and conserve the timeline',()=>{
+ const clips=[
+  {id:'a',start:0,end:28,enabled:true},
+  {id:'b',start:30,end:70,enabled:true},
+ ];
+ const transcript=[
+  {start:7,text:'La pantalla es de color azul.'},
+  {start:12,text:'Pasemos a los ajustes del encuadre.'},
+  {start:16,text:'Siguiente tema, el foco.'},
+  {start:30,text:'Siguiente capítulo, el sonido.'},
+  {start:55,text:'Para terminar, vamos a resumir los cambios.'},
+ ];
+ const proposed=planLocalTransitions(transcript,clips);
+ assert.deepEqual(proposed.map(event=>event.effect),['open-horizontal','iris']);
+ const existingBoundary={at:30,type:'transition',effect:'wipe-right'};
+ const applied=applyPlannedTransitions(clips,[existingBoundary,proposed[1]]);
+ assert.deepEqual(applied.clips.map(clip=>[clip.start,clip.end,clip.transitionIn]),[
+  [0,28,undefined],[30,55,'wipe-right'],[55,70,'iris'],
+ ]);
+ assert.deepEqual(applied.events.map(event=>event.outputTime),[28,53]);
+ assert.equal(applied.clips.reduce((time,clip)=>time+clip.end-clip.start,0),68);
+});
+test('automatic output keeps the source canvas unless another orientation is selected',()=>{
  const horizontal={width:1920,height:1080};
  const vertical={width:1080,height:1920};
  assert.deepEqual(profiles[resolveAutomationProfile(horizontal,'vertical')].slice(0,2),[1080,1920]);
  assert.deepEqual(profiles[resolveAutomationProfile(vertical,'horizontal')].slice(0,2),[1920,1080]);
- assert.equal(resolveAutomationProfile(horizontal),'youtube');
- assert.equal(resolveAutomationProfile(vertical,'auto'),'reels');
- assert.equal(resolveAutomationProfile({...horizontal,rotation:-90},'auto'),'reels');
- assert.equal(resolveAutomationProfile({...vertical,rotation:90},'auto'),'youtube');
+ assert.equal(resolveAutomationProfile(horizontal),'source');
+ assert.equal(resolveAutomationProfile(vertical,'auto'),'source');
  assert.throws(()=>resolveAutomationProfile(horizontal,null),/formato de montaje/);
 });

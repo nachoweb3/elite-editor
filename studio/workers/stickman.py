@@ -438,7 +438,7 @@ def main():
 
     w = int(spec["width"])
     h = int(spec["height"])
-    fps = int(spec.get("fps", 30))
+    fps = float(spec.get("fps", 30))
     duration = float(spec.get("duration", 3.6))
     frames = max(1, int(round(duration * fps)))
     out_dir = spec["outDir"]

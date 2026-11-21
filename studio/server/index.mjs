@@ -14,7 +14,6 @@ import {packageProject,importPackage} from './portable.mjs';
 import {packageShorts,shortMetadata} from './shorts-package.mjs';
 import {updateIntervention,setMusic,interventionCatalogue} from './ai-layer.mjs';
 import {updateStickmen} from './stickman.mjs';
-import {importDiffusion} from './diffusion-sync.mjs';
 import {editByPrompt,undoPrompt,cutByTranscript,previewInstruction,enhanceInstruction} from './prompt-editor.mjs';
 import {faceSettings} from './retouch-settings.mjs';
 import {sourceSettings} from './source-settings.mjs';
@@ -37,6 +36,8 @@ import {hit} from './ratelimit.mjs';
 import {trashSummary,emptyTrash,purgeExpired} from './trash.mjs';
 import packageInfo from '../package.json' with {type:'json'};
 const port=Number(process.env.STUDIO_PORT||4310);
+const installationId=process.env.STUDIO_INSTALLATION_ID;
+const launcher=installationId?'standalone':'development';
 const landingOrigins=new Set(['https://nachoweb3.github.io','http://127.0.0.1:4173','http://localhost:4173']);
 const send=(res,data,status=200)=>{res.writeHead(status,{'Content-Type':'application/json; charset=utf-8','Cache-Control':'no-store'});res.end(JSON.stringify(data));};
 const ipOf=req=>String(req.socket?.remoteAddress||'').replace(/^::ffff:/,'');
@@ -44,9 +45,9 @@ let healthCache={at:0,value:null};
 const HEALTH_CACHE_SECONDS=Number(process.env.STUDIO_HEALTH_CACHE_SECONDS??30);
 async function healthState(){
   if(healthCache.value&&Date.now()-healthCache.at<HEALTH_CACHE_SECONDS*1000)return healthCache.value;
-  let ffmpeg=true;try{await run('ffmpeg',['-version'],{timeout:5000});}catch{ffmpeg=false;}
+  const ffmpeg=(await Promise.all(['ffmpeg','ffprobe'].map(command=>run(command,['-version'],{timeout:5000}).then(()=>true,()=>false)))).every(Boolean);
   let diskFreeGB=null;try{const stat=await fsp.statfs(ROOT);diskFreeGB=Number((stat.bavail*stat.bsize/1024**3).toFixed(2));}catch{}
-  const value={status:ffmpeg?'ok':'degraded',version:packageInfo.version,uptimeSeconds:Math.round(process.uptime()),ffmpeg,accounts:await userCount(),queue:queueStats(),diskFreeGB,time:new Date().toISOString()};
+  const value={status:ffmpeg?'ok':'degraded',version:packageInfo.version,edition:'studio',launcher,installationId,uptimeSeconds:Math.round(process.uptime()),ffmpeg,accounts:await userCount(),queue:queueStats(),diskFreeGB,time:new Date().toISOString()};
   healthCache={at:Date.now(),value};
   return value;
 }
@@ -113,8 +114,8 @@ const server=http.createServer(async(req,res)=>{try{
   if(secure)res.setHeader('Strict-Transport-Security','max-age=31536000');
   if(u.pathname==='/api/health'&&['GET','HEAD'].includes(method)){
     const health=await healthState();
-    const {status,version,ffmpeg}=health;
-    send(res,landingProbe?{status,version,ffmpeg}:health);
+    const {status,version,ffmpeg,edition,launcher}=health;
+    send(res,landingProbe?{status,version,ffmpeg,edition,launcher}:health);
     return;
   }
   if(u.pathname.startsWith('/api/auth/')){
@@ -261,7 +262,7 @@ const server=http.createServer(async(req,res)=>{try{
     if(action==='plan'&&method==='POST'){const b=await body(req);send(res,await previewInstruction(id,b.prompt,b.revision));return;}
     if(action==='enhance'&&method==='POST'){const b=await body(req);send(res,await enhanceInstruction(id,b.prompt,b.revision));return;}
     if(action==='cut'&&method==='POST'){const b=await body(req);send(res,safe(await cutByTranscript(id,b.start,b.end,b.revision)));return;}
-    if(action==='sync'&&method==='POST'){const b=await body(req);send(res,safe(await importDiffusion(id,b.revision)));return;}
+    if(action==='sync'&&method==='POST'){const b=await body(req);let integration;try{integration=await import('./diffusion-sync.mjs');}catch(error){if(error.code!=='ERR_MODULE_NOT_FOUND')throw error;send(res,{error:'La sincronización con Diffusion requiere ejecutar npm ci en la carpeta del estudio.'},503);return;}send(res,safe(await integration.importDiffusion(id,b.revision)));return;}
     if(action==='manual'&&method==='POST'){send(res,safe(await saveManual(id,await body(req))));return;}
     if(action==='undo'&&method==='POST'){send(res,safe(await undoPrompt(id)));return;}
     if(action==='portrait'&&method==='POST'){const b=await body(req);if(b.revision!==p.revision)throw new Error('Recarga el proyecto antes de guardar');p.history=[...(p.history||[]),{settings:p.settings,clips:p.clips}].slice(-20);if(b.settings.cleanAudio!==undefined&&typeof b.settings.cleanAudio!=='boolean')throw Error('Audio setting invalid');p.settings={...p.settings,...faceSettings(b.settings),...sourceSettings({...p.settings,...b.settings}),...(typeof b.settings.cleanAudio==='boolean'?{cleanAudio:b.settings.cleanAudio}:{})};p.revision++;p.artifacts={};await save(p);send(res,safe(p));return;}
@@ -280,4 +281,15 @@ const server=http.createServer(async(req,res)=>{try{
   send(res,{error:'Ruta no encontrada'},404);
 }catch(e){if(!res.headersSent){if(e.retryAfter)res.setHeader('Retry-After',String(e.retryAfter));send(res,{error:e.message},e.status||400);}else res.destroy();}});
 server.requestTimeout=0;server.headersTimeout=60000;
-server.listen(port,'127.0.0.1',()=>console.log(`NACHO WEB3 AI VIDEO STUDIO: http://127.0.0.1:${port}`));
+if(installationId&&process.connected){
+  process.once('disconnect',()=>{server.close();server.closeAllConnections();});
+  server.once('error',error=>{
+    console.error(error.message);
+    process.send({type:'studio-error',code:error.code},()=>process.disconnect());
+    process.exitCode=1;
+  });
+}
+server.listen(port,'127.0.0.1',()=>{
+  console.log(`NACHO WEB3 AI VIDEO STUDIO: http://127.0.0.1:${port}`);
+  if(installationId&&process.connected)process.send({type:'studio-ready'});
+});

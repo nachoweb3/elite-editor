@@ -1,5 +1,7 @@
 import {useEffect,useMemo,useRef,useState} from 'react';
 import type {Placement,Project} from './types';
+import {CLIP_TRANSITIONS,isClipTransition} from '../../shared/transitions.mjs';
+import {ClipTransitionSelect} from './ClipTransitionSelect';
 import './ai-layer.css';
 
 type CatalogAsset={id:string;name:string;kind:string;description?:string;duration?:number;license?:string;author?:string;page?:string;provider?:string;source?:string;file?:string};
@@ -19,7 +21,6 @@ type Props={
 
 const KIND_LABEL:Record<string,string>={meme:'Meme',sound:'Sonido',pexels:'Imagen',transition:'Transición'};
 const STATUS_LABEL:Record<string,string>={accepted:'Aprobado',pending:'Pendiente',rejected:'Rechazado'};
-const EFFECTS=['fadeblack','fadewhite','slide'];
 const clock=(s:number)=>`${Math.floor(s/60)}:${String(Math.floor(s%60)).padStart(2,'0')}.${String(Math.floor(s%1*10))}`;
 
 function NumberField({value,min=0,max=9999,step=.1,disabled,onCommit,label}:{value:number;min?:number;max?:number;step?:number;disabled?:boolean;onCommit:(value:number)=>void;label:string}){
@@ -269,7 +270,7 @@ export function AIInterventions({project,busy,locked=false,api,onProject,onSeek,
      <div className="ai-cards">
       {filteredItems.map(({item,target,index})=>{
        const kind=item.kind||'meme',status=item.status||'accepted',isTransition=kind==='transition',isSound=kind==='sound';
-       const title=isTransition?`Transición · ${item.effect||'fadeblack'}`:item.name||KIND_LABEL[kind]||'Intervención';
+       const title=isTransition?`Transición · ${CLIP_TRANSITIONS[isClipTransition(item.effect)?item.effect:'fadeblack'].label}`:item.name||KIND_LABEL[kind]||'Intervención';
        const mediaTime=Number(item.outputTime)||0;
        const isCurrentActive=Math.abs(currentTime-mediaTime)<2;
 
@@ -319,9 +320,7 @@ export function AIInterventions({project,busy,locked=false,api,onProject,onSeek,
           {!isTransition?<NumberField label="Volumen" value={Number(item.volume??(kind==='sound'?.16:.12))} min={0} max={2} step={.05} disabled={disabled} onCommit={v=>void patch(target,index,{volume:v})}/>:null}
           {!isTransition?<label className="ai-check"><input type="checkbox" checked={item.useAudio===true} disabled={disabled} onChange={e=>void patch(target,index,{useAudio:e.target.checked})}/> Audio del meme</label>:null}
           {isTransition?<label className="ai-number">Efecto
-           <select value={item.effect||'fadeblack'} disabled={disabled} onChange={e=>void patch(target,index,{effect:e.target.value})}>
-            {EFFECTS.map(effect=><option key={effect} value={effect}>{effect}</option>)}
-           </select>
+           <ClipTransitionSelect value={item.effect} disabled={disabled} allowCut={false} onChange={effect=>void patch(target,index,{effect})}/>
           </label>:<label className="ai-number">Reemplazar por
            <select value={item.resourceId||''} disabled={disabled} onChange={e=>{if(e.target.value)void patch(target,index,{resourceId:e.target.value});}}>
             <option value="">{item.name||'Seleccionar otro recurso'}</option>

@@ -165,7 +165,7 @@ export async function importPackage(zipPath,user){
     const settings=validateSettings(raw.settings||{});
     const oldId=raw.id;
     const original=await archiveFile(staging,raw.source,'media');
-    let source=null,media={duration:0,width:settings.profile.startsWith('youtube')?1920:1080,height:settings.profile.startsWith('youtube')?1080:1920,audio:false};
+    let source=null,media={duration:0,width:(settings.profile==='source'||settings.profile.startsWith('youtube'))?1920:1080,height:(settings.profile==='source'||settings.profile.startsWith('youtube'))?1080:1920,audio:false};
     const copies=[];
     if(original&&VIDEO_TYPES.has(path.extname(original).toLowerCase())){
       source=path.join(INPUT_ROOT,id+path.extname(original).toLowerCase());

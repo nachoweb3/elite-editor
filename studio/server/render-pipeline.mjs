@@ -3,7 +3,9 @@ import path from 'node:path';
 import {randomUUID} from 'node:crypto';
 import {ROOT,load,save,probe,run,projectDir} from './core.mjs';
 import {frameFilter,motionFilter,profiles,resolveRenderEncoder,readAssets} from './engine.mjs';
-import {buildComposition,COMPOSITION_FPS} from '../shared/composition.mjs';
+import {buildComposition} from '../shared/composition.mjs';
+import {transitionFilter} from './transition-filter.mjs';
+import {mediaFrameRate,outputQuality,requiresExtendedColor,sourceIsUhd,sourceMedia,UNSUPPORTED_COLOR,videoEncodingArgs} from './render-format.mjs';
 import {sourceAudioFilters} from './source-settings.mjs';
 import {mixTracks} from './audio-tracks.mjs';
 import {retouchSource} from './retouch.mjs';
@@ -26,27 +28,29 @@ export async function render(id, preview, report, {automatic = false, signal} = 
   for (const sourceId of sourceIds) {
     const owner = sourceId === id ? project : await load(sourceId);
     if (owner.ownerId && owner.ownerId !== project.ownerId) throw new Error('Fuente no disponible para este proyecto');
-    sources.set(sourceId, {
-      project: owner,
-      file: await retouchSource({...owner, settings: project.settings}, report, {signal}),
-    });
-    throwIfCancelled(signal);
+    sources.set(sourceId,{project:{...owner,media:await sourceMedia(owner)}});
   }
   const clips = project.clips.filter(c => c.enabled);
   if (!clips.length) throw new Error('No hay fragmentos activados');
-  const composition = buildComposition(project, {sources: [...sources.values()].map(source => source.project)});
-  const [fullWidth, fullHeight, folder] = profiles[settings.profile];
-  if (settings.profile === 'youtube4k' && Math.max(project.media.width, project.media.height) < 3840) {
+  const sourceProjects=[...sources.values()].map(source=>source.project);
+  const mediaSources=sourceProjects.map(source=>source.media);
+  if (mediaSources.some(requiresExtendedColor)) throw new Error(UNSUPPORTED_COLOR);
+  const composition = buildComposition({...project,media:sources.get(id)?.project.media||project.media}, {sources:sourceProjects});
+  const {fps,width,height}=composition;
+  const quality=outputQuality(settings);
+  const folder=profiles[settings.profile]?.[2]||(width>=height?'youtube':'reels');
+  if (settings.profile.endsWith('4k') && !mediaSources.some(sourceIsUhd)) {
     throw new Error('El material original no tiene resolución 4K');
   }
-  const [width, height] = preview
-    ? fullWidth > fullHeight ? [640, 360] : [360, 640]
-    : [fullWidth, fullHeight];
+  for(const source of sources.values()){
+    source.file=await retouchSource({...source.project,settings},report,{signal,maxFps:mediaFrameRate(source.project.media)||fps});
+    throwIfCancelled(signal);
+  }
   const duration = composition.duration;
   const tag = randomUUID();
   const dir = path.join(ROOT, 'cache', tag);
   await fs.mkdir(dir, {recursive: true});
-  report(`[cmd] ffmpeg · ${preview ? 'vista previa' : 'calidad final'} · ${clips.length} cortes · ${width}x${height}`);
+  report(`[cmd] ffmpeg · ${preview ? 'vista previa' : 'calidad final'} · ${clips.length} cortes · ${width}x${height} · ${Number(fps.toFixed(2))} fps`);
 
   const words = composition.words;
   const assPath = path.join(dir, 'captions.ass');
@@ -54,9 +58,8 @@ export async function render(id, preview, report, {automatic = false, signal} = 
   await fs.writeFile(path.join(dir, 'captions.srt'), srt(words), 'utf8');
 
   let hardware = encoder === 'NVENC';
-  const encoderArgs = () => hardware
-    ? ['-c:v', 'h264_nvenc', '-preset', 'p4', '-cq', '20', '-b:v', '0']
-    : ['-c:v', 'libx264', '-preset', 'fast', '-crf', '20', '-threads', '8'];
+  const encoderArgs=intermediate=>videoEncodingArgs(hardware,quality,{intermediate});
+  const willDecorate=composition.visuals.length>0||composition.audio.some(event=>event.type==='media-sound')||project.stickmen?.enabled===true;
   const files = [];
   const partKeys = [];
 
@@ -71,31 +74,19 @@ export async function render(id, preview, report, {automatic = false, signal} = 
     report(`Renderizando ${preview ? 'vista previa' : 'calidad final'}: fragmento ${index + 1}/${clips.length}`);
 
     const transition = composition.timeline[index]?.transition;
-    let filter = frameFilter(settings, width, height)
-      + motionFilter(clip.motion, width, height, length)
-      + `,fps=${COMPOSITION_FPS},format=yuv420p`;
-    if (transition?.in) {
-      const {type, duration: fadeIn} = transition.in;
-      if (type === 'slide') {
-        filter += `,pad=iw*2:ih:iw:0:color=black,crop=iw/2:ih:x='min(iw/2,iw/2*t/${fadeIn})':y=0`;
-      } else {
-        filter += `,fade=t=in:st=0:d=${fadeIn}:color=${type === 'fadewhite' ? 'white' : 'black'}`;
-      }
-    }
-    if (transition?.out) {
-      filter += `,fade=t=out:st=${length - transition.out.duration}:d=${transition.out.duration}:color=black`;
-    }
+    const filter = frameFilter(settings, width, height)
+      + `,fps=${fps}` + motionFilter(clip.motion, width, height, length,fps)
+      + ',format=yuv420p' + transitionFilter(transition,length);
 
     const sourcePrint = await fingerPrint(source) || source;
     let key = partKey({
       source: sourcePrint,
       clip,
-      preview,
       width,
       height,
       filter,
       hasAudio,
-      encoderVersion: hardware ? 'NVENC' : 'CPU',
+      encoderVersion: `${hardware?'NVENC':'CPU'}:${quality}:v2`,
     });
     let cached = await cacheFile('parts', key);
     if (cached) {
@@ -111,7 +102,7 @@ export async function render(id, preview, report, {automatic = false, signal} = 
         '-map', hasAudio ? '0:a:0' : '1:a:0',
         '-vf', filter,
         '-af', 'aresample=48000,asetpts=PTS-STARTPTS',
-        ...encoderArgs(),
+        ...encoderArgs(true),
         '-c:a', 'aac', '-b:a', '192k', '-ac', '2',
         target,
       ];
@@ -124,12 +115,11 @@ export async function render(id, preview, report, {automatic = false, signal} = 
           key = partKey({
             source: sourcePrint,
             clip,
-            preview,
             width,
             height,
             filter,
             hasAudio,
-            encoderVersion: 'CPU',
+            encoderVersion: `CPU:${quality}:v2`,
           });
           const retry = [
             ...input,
@@ -138,7 +128,7 @@ export async function render(id, preview, report, {automatic = false, signal} = 
             '-map', hasAudio ? '0:a:0' : '1:a:0',
             '-vf', filter,
             '-af', 'aresample=48000,asetpts=PTS-STARTPTS',
-            ...encoderArgs(),
+            ...encoderArgs(true),
             '-c:a', 'aac', '-b:a', '192k', '-ac', '2',
             target,
           ];
@@ -176,9 +166,11 @@ export async function render(id, preview, report, {automatic = false, signal} = 
     duration,
     width,
     height,
+    fps,
+    quality,
+    willDecorate,
     music: music ? await fingerPrint(music.file) : null,
     tracks,
-    preview,
     title: settings.title,
     soundEffects: settings.soundEffects,
     audioPlan: plannedAudio,
@@ -233,7 +225,7 @@ export async function render(id, preview, report, {automatic = false, signal} = 
     graph += `[${audio}]alimiter=limit=0.95:level=0:latency=1[aout];[0:v]setpts=PTS-STARTPTS,ass=filename=captions.ass[vout]`;
     await fs.writeFile(path.join(dir, 'final.ffgraph'), graph);
     const rendered = path.join(dir, 'final.mp4');
-    args.push('-/filter_complex', 'final.ffgraph', '-map', '[vout]', '-map', '[aout]', '-t', String(duration), ...encoderArgs(), '-c:a', 'aac', '-b:a', '192k', '-ar', '48000', '-pix_fmt', 'yuv420p', '-movflags', '+faststart', rendered);
+    args.push('-/filter_complex', 'final.ffgraph', '-map', '[vout]', '-map', '[aout]', '-t', String(duration), ...encoderArgs(willDecorate), '-c:a', 'aac', '-b:a', '192k', '-ar', '48000', '-pix_fmt', 'yuv420p', '-movflags', '+faststart', rendered);
     await run('ffmpeg', args, {cwd: dir, log: report, signal});
     throwIfCancelled(signal);
     media = await probe(rendered);
@@ -252,7 +244,8 @@ export async function render(id, preview, report, {automatic = false, signal} = 
     revision: project.revision,
     width,
     height,
-    fps: COMPOSITION_FPS,
+    fps,
+    quality,
     duration: media.duration,
     encoder: hardware ? 'NVENC' : 'CPU',
     srt: captions + '.srt',

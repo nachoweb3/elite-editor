@@ -1,12 +1,14 @@
+import type {ClipTransitionType} from '../../shared/transitions.mjs';
+
 export type Clip={id:string;start:number;end:number;enabled:boolean;reason:string};
 export type Word={start:number;end:number;word:string;estimated?:boolean};
 export type Segment={start:number;end:number;text:string;words:Word[]};
-export type Settings={style:string;subtitle:string;profile:string;fit:string;cropX:number;cropY:number;language:string;subtitles:boolean;cleanAudio:boolean;exposure:number;contrast:number;saturation:number;transition:number;soundEffects:boolean;musicId:string|null;musicVolume:number;zoom:number;title:string;subtitlePosition:string;encoder:string};
+export type Settings={style:string;subtitle:string;profile:string;fit:string;cropX:number;cropY:number;language:string;subtitles:boolean;cleanAudio:boolean;exposure:number;contrast:number;saturation:number;transition:number;soundEffects:boolean;musicId:string|null;musicVolume:number;zoom:number;title:string;subtitlePosition:string;encoder:string;frameRate?:string;exportQuality?:string};
 export type AutoFormat='auto'|'vertical'|'horizontal';
 export type AutoOptions={targetFormat:AutoFormat;subtitles:boolean;subtitlePosition:string;subtitle:string;memes:boolean;broll:boolean;music:boolean;beauty:boolean};
 export type SourcePart={name:string;start:number;end:number};
 export type Artifact={revision?:number;width?:number;height?:number;duration?:number;encoder?:string;createdAt?:string;composition?:string};
-export type CompositionTransition={type:'fadeblack'|'fadewhite'|'slide';duration:number};
+export type CompositionTransition={type:ClipTransitionType;duration:number};
 export type CompositionClip={index:number;id:string;sourceId:string;sourceName?:string;start:number;end:number;from:number;fromFrames:number;duration:number;frames:number;src:string;transition:{in:CompositionTransition|null;out:CompositionTransition|null};motion:string;video:{fit:'cover'|'contain';cropX:number;cropY:number;zoom:number;exposure:number;contrast:number;saturation:number}};
 export type CompositionVisual={id:string;index:number;kind:string;src:string;at:number;duration:number;placement:Placement|null;image:boolean;chroma:Chroma;useAudio:boolean;volume:number;name?:string};
 export type CompositionAudio={id:string;type:'media-sound'|'media-overlay'|'music'|'sound-effect'|'track';src:string;at:number;duration:number;sourceIn:number;volume:number;assetId?:string;trackId?:string;mediaIndex?:number;kind?:string;loop?:boolean;duck?:boolean;fadeIn?:number;fadeOut?:number};
@@ -20,7 +22,7 @@ export type MediaItem={kind?:string;name?:string;description?:string;outputTime?
 export type Decision={label:string;detail:string};
 export type DirectionEvent=Partial<MediaItem>&{type?:string;effect?:string;reason?:string};
 export type Automatic={status?:string;error?:string;startedAt?:string;finishedAt?:string;decisions?:Decision[];direction?:{media?:MediaItem[];events?:DirectionEvent[];summaries?:string[];credits?:string[]}};
-export type Project={id:string;blank?:boolean;name:string;revision:number;media:{duration:number;width:number;height:number;audio:boolean;rotation?:number};sourceParts?:SourcePart[];settings:Settings;clips:Clip[];audioTracks?:AudioTrack[];transcript:Segment[];reviewed:boolean;analysis:null|{silences:{start:number;end:number}[];scenes:{start:number;end:number;type:string;confidence:number;suggestions:{type:string}[]}[];warnings:string[];transcriptionComplete:boolean};automatic?:Automatic;artifacts:Record<string,Artifact>;shorts?:ShortsState;composition?:CompositionSpec;jobs:{id:string;type:string;status:string;message:string;options?:Partial<AutoOptions>}[]};
+export type Project={id:string;blank?:boolean;name:string;revision:number;media:{duration:number;width:number;height:number;audio:boolean;fps?:string;rotation?:number};sourceParts?:SourcePart[];settings:Settings;clips:Clip[];audioTracks?:AudioTrack[];transcript:Segment[];reviewed:boolean;analysis:null|{silences:{start:number;end:number}[];scenes:{start:number;end:number;type:string;confidence:number;suggestions:{type:string}[]}[];warnings:string[];transcriptionComplete:boolean};automatic?:Automatic;artifacts:Record<string,Artifact>;shorts?:ShortsState;composition?:CompositionSpec;jobs:{id:string;type:string;status:string;message:string;options?:Partial<AutoOptions>}[]};
 export type Asset={id:string;name:string;kind:string;tags:string[];license:string};
 
 export type AudioTrack={id:string;assetId:string;name:string;kind:string;sourceDuration:number;at:number;sourceIn:number;duration:number;volume:number;fadeIn:number;fadeOut:number;muted:boolean;locked:boolean};

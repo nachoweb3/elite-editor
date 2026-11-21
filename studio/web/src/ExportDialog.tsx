@@ -1,12 +1,15 @@
 import {useEffect,useState} from 'react';
 import {DialogHeader,Modal} from './Modal';
 import {clock} from './timeline';
+import type {Settings} from './types';
 
 type Check={level:'ok'|'warn'|'error';label:string;detail:string};
+type ExportSettings=Pick<Settings,'encoder'|'profile'|'frameRate'|'exportQuality'>;
 export type Preflight={
   ok:boolean;revision:number;width:number;height:number;fps:number;duration:number;
   encoder:'CPU'|'NVENC'|null;sizeRangeMB:[number,number]|null;measuredSizeMB:number|null;
   freeGB:number|null;timeRangeSeconds:[number,number]|null;checks:Check[];
+  reducesQuality?:boolean;
   resumable:boolean;lastJob:{id:string;status:string;message:string}|null;name:string;
 };
 
@@ -21,18 +24,19 @@ function measuredSize(mb:number){
 const seconds=(value:number)=>value<60?`${value} s`:`${clock(value)} min`;
 const JOB_STATUS:Record<string,string>={failed:'fallido',interrupted:'interrumpido',cancelled:'cancelado'};
 
-export function ExportDialog({api,project,busy,onClose,onExport,onEncoderChange}:{
+export function ExportDialog({api,project,busy,onClose,onExport,onSettingsChange}:{
   api:<T>(route:string,data?:unknown)=>Promise<T>;
-  project:{id:string;revision:number;settings:{encoder:string}};
+  project:{id:string;revision:number;settings:ExportSettings};
   busy:boolean;
   onClose:()=>void;
   onExport:(revision:number)=>Promise<void>;
-  onEncoderChange:(encoder:string)=>Promise<void>;
+  onSettingsChange:(change:Partial<ExportSettings>)=>Promise<void>;
 }){
   const [attempt,setAttempt]=useState(0);
   const [response,setResponse]=useState<{key:string;data?:Preflight;error?:string}|null>(null);
   const [operation,setOperation]=useState<'export'|'settings'|null>(null);
   const [actionError,setActionError]=useState('');
+  const [acceptedReduction,setAcceptedReduction]=useState<string|null>(null);
   const {id,revision}=project;
   const key=`${id}:${revision}:${attempt}`;
   useEffect(()=>{
@@ -63,19 +67,53 @@ export function ExportDialog({api,project,busy,onClose,onExport,onEncoderChange}
   const timeEstimate=timeRange&&(timeRange[1]<60?`${timeRange.join('–')} s`:`${seconds(timeRange[0])} – ${seconds(timeRange[1])}`);
   return <Modal titleId="export-title" onClose={close} busy={!report||!!operation} wide>
     <DialogHeader titleId="export-title" kicker="EXPORTAR" title="Última comprobación" onClose={close}
-      description="Comprueba el montaje y elige el motor antes de renderizar."/>
+      description="Comprueba la resolución, la fluidez y la calidad del MP4 antes de exportar."/>
+    <div className="export-settings">
+    <label className="export-encoder">Formato
+      <select value={project.settings.profile} disabled={busy||!!operation} onChange={event=>{
+        const profile=event.currentTarget.value;
+        void run('settings',()=>onSettingsChange({profile}));
+      }}>
+        <option value="source">Como el original</option>
+        <option value="youtube">Horizontal · 1080p</option>
+        <option value="youtube4k">Horizontal · 4K</option>
+        <option value="reels">Vertical · 1080p</option>
+        <option value="reels4k">Vertical · 4K</option>
+        {['tiktok','shorts'].includes(project.settings.profile)?<option value={project.settings.profile}>Vertical · perfil guardado</option>:null}
+      </select>
+    </label>
+    <label className="export-encoder">Fotogramas por segundo
+      <select value={project.settings.frameRate||'source'} disabled={busy||!!operation} onChange={event=>{
+        const frameRate=event.currentTarget.value;
+        void run('settings',()=>onSettingsChange({frameRate}));
+      }}>
+        <option value="source">Como el original</option>
+        <option value="30">30 fps</option>
+        <option value="60">60 fps</option>
+      </select>
+    </label>
+    <label className="export-encoder">Calidad
+      <select value={project.settings.exportQuality||'high'} disabled={busy||!!operation} onChange={event=>{
+        const exportQuality=event.currentTarget.value;
+        void run('settings',()=>onSettingsChange({exportQuality}));
+      }}>
+        <option value="high">Alta · conserva más detalle</option>
+        <option value="balanced">Equilibrada · menor tamaño</option>
+      </select>
+    </label>
     <label className="export-encoder">Motor de exportación
       <select value={project.settings.encoder} disabled={busy||!!operation} onChange={event=>{
         const encoder=event.currentTarget.value;
-        void run('settings',()=>onEncoderChange(encoder));
+        void run('settings',()=>onSettingsChange({encoder}));
       }}>
         <option value="auto">Automático</option>
         <option value="cpu">CPU</option>
         <option value="nvenc">NVIDIA NVENC</option>
       </select>
     </label>
+    </div>
     {error?<p className="export-error" role="alert">{error}</p>:null}
-    {!report||operation==='settings'?<p className="export-loading" role="status">{operation==='settings'?'Guardando el motor seleccionado…':'Comprobando clips, medio, audio y espacio en disco…'}</p>:null}
+    {!report||operation==='settings'?<p className="export-loading" role="status">{operation==='settings'?'Guardando los ajustes de salida…':'Comprobando clips, medio, audio y espacio en disco…'}</p>:null}
     {data?<>
       <dl className="export-facts">
         <div><dt>Formato</dt><dd>{data.width} × {data.height} · {data.fps} fps</dd></div>
@@ -93,6 +131,11 @@ export function ExportDialog({api,project,busy,onClose,onExport,onEncoderChange}
           <div><b>{check.label}</b><p>{check.detail}</p></div>
         </li>)}
       </ul>
+      {data.ok&&data.reducesQuality?<label className="export-confirm-reduction">
+        <input type="checkbox" checked={acceptedReduction===key}
+          onChange={event=>setAcceptedReduction(event.currentTarget.checked?key:null)}/>
+        <span>Confirmo que quiero exportar con la resolución o los fps reducidos.</span>
+      </label>:null}
       {data.resumable?<p className="export-resume" role="status">
         <b>Se puede reanudar.</b> El render anterior quedó {JOB_STATUS[data.lastJob?.status||'']||'sin completar'}. Al reintentar se podrán reutilizar los tramos que sigan en la caché.
       </p>:null}
@@ -102,7 +145,7 @@ export function ExportDialog({api,project,busy,onClose,onExport,onEncoderChange}
     </>:null}
     <div className="export-actions">
       {error?<button type="button" disabled={busy||!!operation} onClick={()=>{setActionError('');setAttempt(value=>value+1);}}>Volver a comprobar</button>:null}
-      {data?<button type="button" className="export-go" disabled={!data.ok||busy||!!operation||!!error}
+      {data?<button type="button" className="export-go" disabled={!data.ok||busy||!!operation||!!error||(data.reducesQuality&&acceptedReduction!==key)}
         onClick={()=>void run('export',()=>onExport(data.revision))}>
         {operation==='export'?'Enviando…':data.resumable?'Reanudar exportación':'Exportar vídeo'}
       </button>:null}

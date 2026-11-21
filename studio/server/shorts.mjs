@@ -7,6 +7,8 @@ import {sourceAudioFilters,sourceVideoFilters} from './source-settings.mjs';
 import {sampleFaces} from './face-safe.mjs';
 import {remapWords,ass,srt} from './subtitles.mjs';
 import {throwIfCancelled} from './render-cache.mjs';
+import {sourceDimensions} from '../shared/source-format.mjs';
+import {mediaFrameRate,outputFrameRate,outputQuality,requiresExtendedColor,sourceMedia,UNSUPPORTED_COLOR,videoEncodingArgs} from './render-format.mjs';
 
 const MIN_SECONDS = 15;
 const MAX_SECONDS = 55;
@@ -435,9 +437,8 @@ function linearExpression(points, maximum, key) {
 export function buildReframe({width, height, short, sample}) {
   if (!width || !height) throw new Error('No se conocen las dimensiones de la grabación');
   const ratio = 9 / 16;
-  const sourceRatio = width / height;
-  const cropW = sourceRatio > ratio ? Math.max(2, Math.round(height * ratio / 2) * 2) : width;
-  const cropH = sourceRatio < ratio ? Math.max(2, Math.round(width / ratio / 2) * 2) : height;
+  const cropW = Math.min(width - width % 2, Math.max(2, Math.round(height * ratio / 2) * 2));
+  const cropH = Math.min(height - height % 2, Math.max(2, Math.round(width / ratio / 2) * 2));
   const screen = screenCenterFromGrid(sample?.grid, cropW / width);
   const facePath = bucketFacePath(sample, short, width) || staticFacePath(sample, short, width);
   const maxX = Math.max(0, width - cropW);
@@ -487,13 +488,17 @@ async function resolveShortSource(project) {
   return owner;
 }
 
-function encoderArgs(hardware) {
-  return hardware
-    ? ['-c:v', 'h264_nvenc', '-preset', 'p4', '-cq', '20', '-b:v', '0']
-    : ['-c:v', 'libx264', '-preset', 'fast', '-crf', '20', '-threads', '8'];
+export function shortOutputFormat(reframe, media, settings) {
+  const uhd = reframe.cropW >= 2160 && reframe.cropH >= 3840;
+  return {
+    width: uhd ? 2160 : 1080,
+    height: uhd ? 3840 : 1920,
+    fps: outputFrameRate(settings, [media]),
+    quality: outputQuality(settings),
+  };
 }
 
-async function renderOne(project, owner, short, report, {signal} = {}) {
+async function renderOne(project, owner, source, short, report, {signal} = {}) {
   throwIfCancelled(signal);
   const sayShort = message => say(report, message);
   const duration = Math.max(0.1, short.duration);
@@ -519,8 +524,6 @@ async function renderOne(project, owner, short, report, {signal} = {}) {
   };
   const words = remapWords(owner.transcript, [{id: 'short', start: short.start, end: short.end, enabled: true}]);
   if (!words.length) throw new Error(`El short ${short.index} no contiene palabras para subtitular`);
-  await fs.writeFile(assPath, ass(words, settings, 1080, 1920, duration), 'utf8');
-  await fs.writeFile(srtPath, srt(words), 'utf8');
 
   sayShort(`Detectando caras y contenido del short ${short.index}/${project.shorts.count}`);
   let sample = {samples: [], faces: [], grid: null};
@@ -533,32 +536,36 @@ async function renderOne(project, owner, short, report, {signal} = {}) {
     sayShort(`No se pudo seguir la cara del short ${short.index}; se usa el centro de la pantalla: ${error.message}`);
   }
   throwIfCancelled(signal);
+  const [sourceWidth, sourceHeight] = sourceDimensions(source);
   const reframe = buildReframe({
-    width: Number(owner.media.width),
-    height: Number(owner.media.height),
+    width: sourceWidth,
+    height: sourceHeight,
     short: {...short, duration},
     sample,
   });
-  sayShort(`Reencuadre ${reframe.mode === 'face' ? 'siguiendo la cara' : 'siguiendo la pantalla'} · ${reframe.cropW}x${reframe.cropH} → 1080x1920`);
+  const {width, height, fps, quality} = shortOutputFormat(reframe, source, settings);
+  await fs.writeFile(assPath, ass(words, settings, width, height, duration), 'utf8');
+  await fs.writeFile(srtPath, srt(words), 'utf8');
+  sayShort(`Reencuadre ${reframe.mode === 'face' ? 'siguiendo la cara' : 'siguiendo la pantalla'} · ${reframe.cropW}x${reframe.cropH} → ${width}x${height} · ${Number(fps.toFixed(2))} fps`);
 
   const filters = [
     reframe.cropFilter,
-    'scale=1080:1920:flags=lanczos',
+    `scale=${width}:${height}:flags=lanczos`,
     'setsar=1',
     `eq=brightness=${settings.exposure}:contrast=${settings.contrast}:saturation=${settings.saturation}`,
     ...sourceVideoFilters(settings),
-    'fps=30',
+    `fps=${fps}`,
     'format=yuv420p',
     'ass=filename=captions.ass',
   ].filter(Boolean);
   const audioFilters = ['aresample=48000', 'asetpts=PTS-STARTPTS', ...sourceAudioFilters(settings)];
   const input = ['-hide_banner', '-nostdin', '-y', '-ss', String(short.start), '-i', owner.source];
-  if (!owner.media.audio) input.push('-f', 'lavfi', '-i', 'anullsrc=r=48000:cl=stereo');
+  if (!source.audio) input.push('-f', 'lavfi', '-i', 'anullsrc=r=48000:cl=stereo');
   const baseArgs = [
     ...input,
     '-t', String(duration),
     '-map', '0:v:0',
-    '-map', owner.media.audio ? '0:a:0' : '1:a:0',
+    '-map', source.audio ? '0:a:0' : '1:a:0',
     '-vf', filters.join(','),
     '-af', audioFilters.join(','),
     '-c:a', 'aac',
@@ -575,7 +582,7 @@ async function renderOne(project, owner, short, report, {signal} = {}) {
   const output = path.join(outputDir, `short-${String(short.index).padStart(2, '0')}-${short.id}.mp4`);
   sayShort(`Renderizando short ${short.index}/${project.shorts.count} · ${short.start.toFixed(1)}s → ${short.end.toFixed(1)}s`);
   const encode = async (useHardware) => {
-    await run('ffmpeg', [...baseArgs, ...encoderArgs(useHardware), output], {cwd: dir, log: report, signal});
+    await run('ffmpeg', [...baseArgs, ...videoEncodingArgs(useHardware, quality), output], {cwd: dir, log: report, signal});
   };
   try {
     await encode(hardware);
@@ -588,10 +595,13 @@ async function renderOne(project, owner, short, report, {signal} = {}) {
     } else throw error;
   }
   const media = await probe(output);
-  if (Math.round(media.width) !== 1080 || Math.round(media.height) !== 1920) {
-    throw new Error(`El short ${short.index} no se exportó en 1080x1920`);
+  if (media.width !== width || media.height !== height) {
+    throw new Error(`El short ${short.index} no se exportó en ${width}x${height}`);
   }
   if (Math.abs(media.duration - duration) > 0.35) throw new Error(`La duración del short ${short.index} no coincide con el momento elegido`);
+  if (Math.abs(mediaFrameRate(media) - fps) > Math.max(0.05, 1 / duration + 0.01)) {
+    throw new Error(`El short ${short.index} no conservó la frecuencia de fotogramas elegida`);
+  }
   const captionsDir = path.join(SUBTITLES_ROOT, 'shorts', project.id);
   await fs.mkdir(captionsDir, {recursive: true});
   const captionBase = `short-${String(short.index).padStart(2, '0')}-${short.id}`;
@@ -606,8 +616,10 @@ async function renderOne(project, owner, short, report, {signal} = {}) {
     file: output,
     srt: finalSrt,
     ass: finalAss,
-    width: 1080,
-    height: 1920,
+    width,
+    height,
+    fps,
+    quality,
     duration: media.duration,
     encoder: hardware ? 'NVENC' : 'CPU',
     reframe: {
@@ -624,8 +636,10 @@ export async function renderShorts(id, report, {signal} = {}) {
   let project = await load(id);
   try {
     const owner = await resolveShortSource(project);
+    const media = await sourceMedia(owner);
+    if (requiresExtendedColor(media)) throw new Error(UNSUPPORTED_COLOR);
     const plan = planShortMoments(owner.transcript, {
-      sourceDuration: Number(owner.media.duration) || 0,
+      sourceDuration: Number(media.duration) || 0,
       count: TARGET_COUNT,
     });
     project.shorts = {
@@ -646,7 +660,7 @@ export async function renderShorts(id, report, {signal} = {}) {
       item.status = 'rendering';
       item.error = '';
       await save(project);
-      const rendered = await renderOne(project, owner, item, report, {signal});
+      const rendered = await renderOne(project, owner, media, item, report, {signal});
       project = await load(id);
       project.shorts.items[index] = rendered;
       await save(project);

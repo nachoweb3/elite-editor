@@ -2,7 +2,8 @@ import fs from 'node:fs/promises';
 import path from 'node:path';
 import {CACHE_ROOT,config,importVideo,run} from './core.mjs';
 import {assertProjectQuota,assertQuota,limitMessage,planFor,recordUsage,storageFor} from './usage.mjs';
-import {COMPOSITION_FPS} from '../shared/composition.mjs';
+import {outputFrameRate,requiresExtendedColor,UNSUPPORTED_COLOR,videoEncodingArgs} from './render-format.mjs';
+import {sourceCanvas} from '../shared/source-format.mjs';
 
 const VIDEO_EXTENSIONS=new Set(['.mp4','.mov','.mkv','.webm']);
 const MANIFEST_LIMIT=16*1024;
@@ -105,16 +106,10 @@ async function concat(files,durations,output,directory,signal){
     '-map','0:v:0','-map','0:a:0?','-c','copy','-movflags','+faststart',output],{cwd:directory,signal});
 }
 
-function canvas(first){
-  const rotated=Math.abs(first.rotation%180)===90;
-  const [width,height]=rotated?[first.video.height,first.video.width]:[first.video.width,first.video.height];
-  const scale=Math.min(1,3840/Math.max(width,height),Math.sqrt(3840*2160/(width*height)));
-  const even=value=>Math.max(2,Math.floor(value*scale/2)*2);
-  return [even(width),even(height)];
-}
-
 async function normalizeParts(files,parts,directory,signal){
-  const [width,height]=canvas(parts[0]);
+  const sources=parts.map(({video,rotation})=>({width:video.width,height:video.height,rotation}));
+  const [width,height]=sourceCanvas(sources[0],sources);
+  const fps=outputFrameRate({},parts.map(part=>({fps:part.video.avg_frame_rate})));
   const withAudio=parts.some(part=>part.audio);
   const normalized=[];
   for(const [index,part] of parts.entries()){
@@ -125,9 +120,9 @@ async function normalizeParts(files,parts,directory,signal){
     args.push('-map',`0:${part.video.index}`);
     if(withAudio)args.push('-map',part.audio?`0:${part.audio.index}`:'1:a:0',
       '-af','aresample=48000,apad','-c:a','aac','-b:a','192k','-ac','2');
-    const fit=`scale=${width}:${height}:force_original_aspect_ratio=decrease:force_divisible_by=2,pad=${width}:${height}:(ow-iw)/2:(oh-ih)/2`;
-    args.push('-vf',`fps=${COMPOSITION_FPS},${fit},setsar=1,format=yuv420p`,'-t',String(part.duration),
-      '-c:v','libx264','-preset','fast','-crf','20',output);
+    const fit=`scale=${width}:${height}:flags=lanczos:force_original_aspect_ratio=decrease:force_divisible_by=2,pad=${width}:${height}:(ow-iw)/2:(oh-ih)/2`;
+    args.push('-vf',`fps=${fps},${fit},setsar=1,format=yuv420p`,'-t',String(part.duration),
+      ...videoEncodingArgs(false,'high',{intermediate:true}),output);
     try{await run('ffmpeg',args,{cwd:directory,signal});}
     catch(error){
       signal?.throwIfAborted();
@@ -147,6 +142,8 @@ async function mergeParts(files,directory,signal){
       throw new Error(`No se pudo leer el vídeo de la parte ${index+1}.`,{cause:error});
     }
   }
+  if(parts.some(({video})=>requiresExtendedColor({pixelFormat:video.pix_fmt,colorTransfer:video.color_transfer,colorPrimaries:video.color_primaries})))
+    throw new Error(UNSUPPORTED_COLOR);
   const expected=parts.reduce((sum,part)=>sum+part.duration,0);
   const tolerance=Math.max(.2,parts.length*.08);
   const output='joined.mp4';

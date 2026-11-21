@@ -1,13 +1,10 @@
 const formats = ['auto', 'vertical', 'horizontal'];
 
-export function resolveAutomationProfile(media, targetFormat = 'auto') {
+export function resolveAutomationProfile(_media, targetFormat = 'auto') {
   if (!formats.includes(targetFormat)) throw new Error('El formato de montaje no es válido.');
   if (targetFormat === 'vertical') return 'reels';
   if (targetFormat === 'horizontal') return 'youtube';
-  const portrait = Math.abs((media.rotation || 0) % 180) === 90
-    ? media.width > media.height
-    : media.height > media.width;
-  return portrait ? 'reels' : 'youtube';
+  return 'source';
 }
 
 export function automationOptions(value = {}) {

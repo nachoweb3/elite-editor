@@ -12,8 +12,8 @@ const recipes:{name:string;description:string;options:AutoOptions}[]=[
   options:{targetFormat:'auto',subtitles:true,subtitlePosition:'bottom',subtitle:'Cinematic',memes:false,broll:false,music:false,beauty:false},
  },
  {
-  name:'Tutorial',description:'Montaje horizontal con subtítulos y planos de apoyo.',
-  options:{targetFormat:'horizontal',subtitles:true,subtitlePosition:'bottom',subtitle:'Tutorial',memes:false,broll:true,music:false,beauty:false},
+  name:'Tutorial',description:'Respeta el formato del original y añade subtítulos y planos de apoyo.',
+  options:{targetFormat:'auto',subtitles:true,subtitlePosition:'bottom',subtitle:'Tutorial',memes:false,broll:true,music:false,beauty:false},
  },
  {
   name:'Short dinámico',description:'Salida vertical con subtítulos, recursos y música.',
@@ -24,9 +24,9 @@ const recipes:{name:string;description:string;options:AutoOptions}[]=[
 export function automaticPreferences(settings?:Project['settings']):AutoOptions{
  const read=(key:string)=>{try{return localStorage.getItem('nacho:auto-'+key);}catch{return null;}};
  const savedFormat=read('targetFormat');
- const targetFormat=settings
-  ? settings.profile.startsWith('youtube')?'horizontal':'vertical'
-  : savedFormat==='vertical'||savedFormat==='horizontal'?savedFormat:'auto';
+ const targetFormat=savedFormat==='vertical'||savedFormat==='horizontal'||savedFormat==='auto'
+  ? savedFormat
+  : 'auto';
  return {
   targetFormat,
   subtitles:settings?.subtitles??(read('subtitles')!=='false'),
@@ -35,7 +35,7 @@ export function automaticPreferences(settings?:Project['settings']):AutoOptions{
   memes:read('memes')!=='false',
   broll:read('broll')!=='false',
   music:read('music')!=='false',
-  beauty:read('beauty')!=='false',
+  beauty:read('beauty')==='true',
  };
 }
 
@@ -136,7 +136,7 @@ export function Workflow({
    <label className="workflow-format">
     <span>Formato de salida</span>
     <select value={targetFormat} disabled={busy} onChange={event=>setOptions({...options,targetFormat:event.target.value as AutoFormat})}>
-     <option value="auto">Automático · según la grabación</option>
+     <option value="auto">Como el original · conserva la resolución</option>
      <option value="vertical">Vertical 9:16 · 1080 × 1920</option>
      <option value="horizontal">Horizontal 16:9 · 1920 × 1080</option>
     </select>

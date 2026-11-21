@@ -6,6 +6,7 @@ import {stickmanInserts,insertOverlayGraph,spliceInserts} from './stickman.mjs';
 import {placementsForArtifact} from './face-safe.mjs';
 import {buildComposition} from '../shared/composition.mjs';
 import {cacheFile,cachePath,copyAtomic,overlayKey,fingerPrint,throwIfCancelled} from './render-cache.mjs';
+import {outputQuality,videoEncodingArgs} from './render-format.mjs';
 const cropCache=new Map();
 export async function decorate(id,preview,report,{signal}={}){
  throwIfCancelled(signal);
@@ -19,9 +20,11 @@ export async function decorate(id,preview,report,{signal}={}){
   try{placements=await placementsForArtifact(p,artifact,report,{signal});}
   catch(error){if(signal?.aborted)throw error;report('No se pudo analizar caras; los memes se omiten para no tapar a nadie: '+error.message);for(let i=0;i<media.length;i++)if(['meme','pexels'].includes(media[i].kind))placements.set(i,null);}
  }
- if(media.length||inserts.length){
+ const visualInserts=visuals.some(visual=>media[visual.index]?.file&&(visual.placement||placements.get(visual.index)));
+ const audioInserts=plannedAudio.some(event=>event.type==='media-sound'&&media[event.mediaIndex]?.file);
+ if(visualInserts||audioInserts||inserts.length){
   const cacheMedia=media.map(({placement,...item})=>item);
-  const key=overlayKey({artifact:artifact.composition?{composition:artifact.composition}:await fingerPrint(artifact.file),media:cacheMedia,visuals,audio:plannedAudio,placements,inserts,preview,width:artifact.width,height:artifact.height});
+  const key=overlayKey({artifact:artifact.composition?{composition:artifact.composition}:await fingerPrint(artifact.file),media:cacheMedia,visuals,audio:plannedAudio,placements,inserts,width:artifact.width,height:artifact.height});
   const cached=await cacheFile('overlays',key);
   const output=artifact.file.replace(/\.mp4$/,'-resources.mp4');
   if(cached){
@@ -51,7 +54,7 @@ export async function decorate(id,preview,report,{signal}={}){
   const overlay=insertOverlayGraph(video,inserts,index,args);graph+=overlay.graph;video=overlay.video;index=overlay.index;
   graph+=`[${video}]format=yuv420p[vout];[${audio}]alimiter=limit=0.95:level=0:latency=1[aout]`;
   const dir=path.join(ROOT,'cache',randomUUID());await fs.mkdir(dir);await fs.writeFile(path.join(dir,'resources.ffgraph'),graph);
-  const rendered=path.join(dir,'resources.mp4');args.push('-/filter_complex',path.join(dir,'resources.ffgraph'),'-map','[vout]','-map','[aout]','-t',String(artifact.duration),'-c:v',artifact.encoder==='NVENC'?'h264_nvenc':'libx264',...(artifact.encoder==='NVENC'?['-preset','p4','-cq','20','-b:v','0']:['-preset','fast','-crf','20','-threads','8']),'-pix_fmt','yuv420p','-c:a','aac','-b:a','192k','-ar','48000','-movflags','+faststart',rendered);await run('ffmpeg',args,{log:report,signal});throwIfCancelled(signal);const info=await probe(rendered);if(Math.abs(info.duration-artifact.duration)>.25)throw new Error('Duración incorrecta tras añadir recursos');const cacheTarget=await cachePath('overlays',key);await copyAtomic(rendered,cacheTarget);await copyAtomic(rendered,output);
+  const rendered=path.join(dir,'resources.mp4');args.push('-/filter_complex',path.join(dir,'resources.ffgraph'),'-map','[vout]','-map','[aout]','-t',String(artifact.duration),...videoEncodingArgs(artifact.encoder==='NVENC',artifact.quality||outputQuality(p.settings)),'-pix_fmt','yuv420p','-c:a','aac','-b:a','192k','-ar','48000','-movflags','+faststart',rendered);await run('ffmpeg',args,{log:report,signal});throwIfCancelled(signal);const info=await probe(rendered);if(Math.abs(info.duration-artifact.duration)>.25)throw new Error('Duración incorrecta tras añadir recursos');const cacheTarget=await cachePath('overlays',key);await copyAtomic(rendered,cacheTarget);await copyAtomic(rendered,output);
   const latest=await load(id);
   if(latest.automatic?.direction?.media)for(const [mediaIndex,placement] of placements){const item=latest.automatic.direction.media[mediaIndex];if(item&&['meme','pexels'].includes(item.kind)&&!item.placement)item.placement=placement;}
   latest.artifacts[kind]={...artifact,file:output,createdAt:new Date().toISOString()};await save(latest);

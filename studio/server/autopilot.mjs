@@ -6,7 +6,7 @@ import {analyze,readAssets} from './engine.mjs';
 import {render} from './render-pipeline.mjs';
 import {sanitizeTranscript,fillerIntervals,removeIntervals} from './dialogue-clean.mjs';
 import {planMemes} from './meme-plan.mjs';
-import {planDirection} from './director.mjs';
+import {applyPlannedTransitions,planDirection,planLocalTransitions} from './director.mjs';
 import {decorate} from './decorate.mjs';
 import {planBroll} from './broll.mjs';
 import {pexelsStatus} from './pexels.mjs';
@@ -32,7 +32,7 @@ export async function autopilot(id,report,{reviewOnly=false,signal,options={}}={
     catch{throw new Error('Falta el modelo local de Whisper. Sigue la guía del estudio y ejecuta npm run model:tiny antes de montar grabaciones con audio.');}
   }
   p.history=[...(p.history||[]),{settings:p.settings,clips:p.clips,audioTracks:p.audioTracks||[],transcript:p.transcript,manual:p.manual===true,automatic:structuredClone(p.automatic??null)}].slice(-20);p.manual=false;
-  const useMaxBeauty=typeof options.beauty==='boolean'?options.beauty:(p.settings.beautyAuto!==false);
+  const useMaxBeauty=typeof options.beauty==='boolean'?options.beauty:(p.settings.beautyAuto===true);
   const face=automaticFaceSettings(p.settings,options.beauty);
   const useSubtitles=typeof options.subtitles==='boolean'?options.subtitles:(typeof p.settings.subtitles==='boolean'?p.settings.subtitles:true);
   const subPosition=options.subtitlePosition||p.settings.subtitlePosition||'top';
@@ -41,7 +41,8 @@ export async function autopilot(id,report,{reviewOnly=false,signal,options={}}={
   const useMusic=typeof options.music==='boolean'?options.music:true;
   const useBroll=options.broll!==false;
 
-  p.settings={...defaults,...face,beautyAuto:useMaxBeauty,language:'es',profile,fit:'contain',subtitle:subTemplate,subtitlePosition:subPosition,style:'CINEMATIC',transition:0,cleanAudio:p.media.audio,subtitles:useSubtitles};
+  p.settings={...defaults,...face,beautyAuto:useMaxBeauty,language:'es',profile,fit:'contain',subtitle:subTemplate,subtitlePosition:subPosition,style:'CINEMATIC',transition:0,cleanAudio:p.media.audio,subtitles:useSubtitles,
+    encoder:p.settings.encoder??defaults.encoder,frameRate:p.settings.frameRate??defaults.frameRate,exportQuality:p.settings.exportQuality??defaults.exportQuality};
   p.automatic={status:'working',decisions:[],startedAt:new Date().toISOString()};await save(p);
   report('[agente] Modo autónomo: analizando voz, silencios, imagen y discurso');
   if(useMaxBeauty)report('[agente] Belleza automática al máximo: piel, ojeras, mirada, lifting y rasgos');
@@ -76,9 +77,7 @@ export async function autopilot(id,report,{reviewOnly=false,signal,options={}}={
       }
       direction.credits=[...new Set([...(direction.credits||[]),...direction.media.map(item=>item.attribution).filter(Boolean)])];
       p.automatic.direction=direction;
-      for(const event of direction.events){p.clips=p.clips.flatMap(c=>event.at>c.start+.5&&event.at<c.end-.5?[{...c,end:event.at},{...c,id:c.id+'-topic',start:event.at,transitionIn:event.effect}]:[c]);}
-      finish.detail='Transiciones en cambios de explicación. Cortes limpios en pausas.';
-      decisions.push({label:'Cambios de explicación',detail:`${direction.events.length} transiciones propuestas por el analizador del discurso.`},{label:'Recursos',detail:`${direction.media.length} memes, sonidos o imágenes seleccionados por contexto.`});
+      decisions.push({label:'Recursos',detail:`${direction.media.length} memes, sonidos o imágenes seleccionados por contexto.`});
     }catch(error){
       signal?.throwIfAborted();
       p.analysis.warnings.push('Análisis de significado no disponible: '+error.message);
@@ -90,7 +89,15 @@ export async function autopilot(id,report,{reviewOnly=false,signal,options={}}={
     }
   }else{
     p.automatic.direction=direction;
-    decisions.push({label:'Memes y efectos',detail:'Desactivados para este montaje.'});
+    decisions.push({label:'Memes y sonidos',detail:'Desactivados para este montaje.'});
+  }
+  const analyzedTransitions=applyPlannedTransitions(p.clips,direction.events);
+  const transitions=analyzedTransitions.events.length?analyzedTransitions:applyPlannedTransitions(p.clips,planLocalTransitions(p.transcript,p.clips));
+  p.clips=transitions.clips;
+  direction.events=transitions.events;
+  if(transitions.events.length){
+    finish.detail+=' Las transiciones señalan cambios de explicación o de sección.';
+    decisions.push({label:'Cambios de explicación',detail:`${transitions.events.length} ${transitions.events.length===1?'transición aplicada':'transiciones aplicadas'}.`});
   }
   if(useBroll){
     if((await pexelsStatus()).configured){

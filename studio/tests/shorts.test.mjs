@@ -1,6 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {planShortMoments,transcriptSentences,buildReframe,cleanHook} from '../server/shorts.mjs';
+import {planShortMoments,transcriptSentences,buildReframe,cleanHook,shortOutputFormat} from '../server/shorts.mjs';
+import {sourceDimensions} from '../shared/source-format.mjs';
 
 const words = (text, start, step = 0.28) => {
   let time = start;
@@ -80,4 +81,17 @@ test('si solo hay caras de reacción en la esquina, el encuadre sigue la pantall
   assert.equal(frame.mode, 'screen');
   assert.match(frame.cropFilter, /crop=w=608:h=1080/);
   assert.equal(frame.keyframes.length, 2);
+});
+
+test('los shorts preservan el ritmo de origen y ofrecen UHD si el crop tiene píxeles suficientes', () => {
+  const format = (media, settings) => {
+    const [width, height] = sourceDimensions(media);
+    const crop = buildReframe({width, height, short: {start: 0, end: 20, duration: 20}});
+    return shortOutputFormat(crop, media, settings);
+  };
+  const landscape = {width: 3840, height: 2160, fps: '120000/1001'};
+  assert.deepEqual(format(landscape), {width: 1080, height: 1920, fps: 120000/1001, quality: 'high'});
+  assert.deepEqual(format({...landscape, rotation: 90}), {width: 2160, height: 3840, fps: 120000/1001, quality: 'high'});
+  assert.deepEqual(format({width: 2160, height: 3840, fps: 120}, {frameRate: '60', exportQuality: 'balanced'}),
+    {width: 2160, height: 3840, fps: 60, quality: 'balanced'});
 });

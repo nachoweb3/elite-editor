@@ -6,7 +6,8 @@ import {ROOT,atomic} from './core.mjs';
 
 const scrypt=promisify(scryptCallback);
 const DATA_FILE=process.env.STUDIO_ACCOUNTS_FILE?path.resolve(ROOT,process.env.STUDIO_ACCOUNTS_FILE):path.join(ROOT,'data','accounts.json');
-const COOKIE='nw_session';
+const cookieName=process.env.STUDIO_SESSION_COOKIE;
+const COOKIE=/^[A-Za-z0-9_]{8,48}$/.test(cookieName||'')?cookieName:'nw_session';
 const SESSION_SECONDS=30*24*60*60;
 const MAX_SESSIONS=8;
 const ATTEMPT_LIMIT=10;
